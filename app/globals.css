@@ -24,3 +24,17 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* utilities used by Student/Curator screens */
+.container {
+  @apply mx-auto px-4;
+}
+.card {
+  @apply rounded-2xl shadow border border-black/5 dark:border-white/10 bg-white dark:bg-zinc-900;
+}
+.btn {
+  @apply inline-flex items-center justify-center rounded-xl px-4 py-2 font-medium;
+}
+.btn-primary {
+  @apply bg-black text-white dark:bg-white dark:text-black;
+}

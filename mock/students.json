@@ -1,0 +1,29 @@
+[
+  {
+    "id": 1,
+    "name": "Артём Ганеев",
+    "email": "artem.g@example.com",
+    "country_id": "it",
+    "gpa": 4.04,
+    "ielts_score": 6.0,
+    "selected_program_ids": [1001, 2001]
+  },
+  {
+    "id": 2,
+    "name": "Вероника Смирнова",
+    "email": "veronika.s@example.com",
+    "country_id": "at",
+    "gpa": 4.5,
+    "ielts_score": 6.5,
+    "selected_program_ids": [1001, 1002]
+  },
+  {
+    "id": 3,
+    "name": "Иван Петров",
+    "email": "ivan.p@example.com",
+    "country_id": "at",
+    "gpa": 3.8,
+    "ielts_score": 5.5,
+    "selected_program_ids": [1002]
+  }
+]

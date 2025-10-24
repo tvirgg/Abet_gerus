@@ -1,0 +1,17 @@
+{
+  "1": {
+    "1": { "status": "done", "submission": { "email": "artem.g@example.com", "password": "..." } },
+    "2": { "status": "review", "submission": "https://link-to-drive.com" },
+    "10": { "status": "done", "submission": "passport_artem.pdf" },
+    "11": { "status": "done", "submission": "photo_artem.jpg" },
+    "21": { "status": "done", "submission": "tolc_results.pdf" }
+  },
+  "2": {
+    "1": { "status": "done", "submission": { "email": "veronika.s@example.com", "password": "..." } },
+    "10": { "status": "review", "submission": "passport_veronika.pdf" },
+    "12": { "status": "done", "submission": "school_docs_veronika.pdf" }
+  },
+  "3": {
+     "1": { "status": "review", "submission": { "email": "ivan.p@example.com", "password": "..." } }
+  }
+}

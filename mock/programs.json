@@ -1,0 +1,29 @@
+[
+  {
+    "id": 1001,
+    "title": "Бакалавр: Компьютерные науки",
+    "university_id": "tu_wien",
+    "deadline": "2026-02-15",
+    "link": "https://www.tuwien.at/en/studies/admission/bachelors-programmes-with-selection-procedure-or-entrance-exam/computer-sciences/",
+    "image_url": "https://www.educationcenter.cz/assets/images/ru/blog/vsyo-chto-nuzhno-znat-o-venskom-tehnicheskom-universitete-TU-Wien/vsyo-chto-nuzhno-znat-o-venskom-tehnicheskom-universitete-TU-Wien.jpg",
+    "required_document_ids": [501, 502, 503]
+  },
+  {
+    "id": 1002,
+    "title": "Бакалавр: Архитектура",
+    "university_id": "tu_wien",
+    "deadline": "2026-03-01",
+    "link": "https://www.tuwien.at/en/studies/studies/bachelors-programmes/architecture-033-243/",
+    "image_url": "https://www.educationcenter.cz/assets/images/ru/blog/vsyo-chto-nuzhno-znat-o-venskom-tehnicheskom-universitete-TU-Wien/vsyo-chto-nuzhno-znat-o-venskom-tehnicheskom-universitete-TU-Wien.jpg",
+    "required_document_ids": [501, 502, 504]
+  },
+  {
+    "id": 2001,
+    "title": "Bachelor: Genomics",
+    "university_id": "unibo",
+    "deadline": "2026-04-10",
+    "link": "https://www.unibo.it/en/teaching/course-unit-catalogue/course-unit/2023/46231",
+    "image_url": "https://static.tildacdn.pro/tild3530-6661-4735-b266-323538636333/9873e9ee7f00010176f0.jpg",
+    "required_document_ids": [501, 502, 402]
+  }
+]
