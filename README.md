@@ -35,3 +35,18 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 # Abet_gerus
+
+## Database Setup (Development)
+
+Before running the API, ensure the database is ready:
+
+1. Start Docker containers:
+   ```bash
+   docker-compose up -d
+   ```
+2. Apply migrations and seed data (in apps/api directory):
+   ```bash
+   cd apps/api
+   npx prisma migrate dev --name init
+   npx prisma db seed
+   ```
