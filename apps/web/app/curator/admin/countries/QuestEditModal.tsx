@@ -16,7 +16,7 @@ export default function QuestEditModal({ quest, onSave, onClose }: Props) {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData((prev: any) => ({ ...prev, [name]: name === 'xp' ? Number(value) : value }));
+    setFormData((prev: any) => ({ ...prev, [name]: name === 'xpReward' ? Number(value) : value }));
   };
   
   const handleSubmit = (e: React.FormEvent) => {
@@ -44,7 +44,7 @@ export default function QuestEditModal({ quest, onSave, onClose }: Props) {
             </div>
             <div>
               <label className="text-sm">Опыт (XP)</label>
-              <input type="number" name="xp" value={formData.xp} onChange={handleChange} className="w-full mt-1 input-style" />
+              <input type="number" name="xpReward" value={formData.xpReward} onChange={handleChange} className="w-full mt-1 input-style" />
             </div>
           </div>
           <div className="flex justify-end gap-3 mt-6">

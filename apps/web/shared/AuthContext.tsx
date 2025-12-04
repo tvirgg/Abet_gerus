@@ -65,12 +65,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     const data = await res.json();
     localStorage.setItem("accessToken", data.accessToken);
     await fetchProfile(data.accessToken);
-
-    if (data.user.role === "student") {
-      router.replace("/student/dashboard");
-    } else {
-      router.replace("/curator/dashboard");
-    }
+    // Редирект теперь обрабатывается в useEffect на странице логина
   };
 
   const register = async (data: any) => {
@@ -89,12 +84,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       const loginData = await res.json();
       localStorage.setItem("accessToken", loginData.accessToken);
       await fetchProfile(loginData.accessToken);
-
-      if (loginData.user.role === "student") {
-        router.replace("/student/dashboard");
-      } else {
-        router.replace("/curator/dashboard");
-      }
+      // Редирект теперь обрабатывается в useEffect на странице логина
   };
 
   const logout = () => {

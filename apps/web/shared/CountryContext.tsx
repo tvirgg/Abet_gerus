@@ -20,7 +20,7 @@ export type QuestTemplate = {
   id: number;
   stage: string;
   title: string;
-  xp: number;
+  xpReward: number; // Renamed from xp
   description: string;
   deadline: string;
   links_to_document_id: number | null;
@@ -79,36 +79,63 @@ function readOverrides(): CountryProfile[] | null {
 export const CountryProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
   const { user } = useAuth();
   const [countries, setCountries] = useState<CountryProfile[]>([]);
+  const [universities, setUniversities] = useState<University[]>([]);
+  const [quests, setQuests] = useState<QuestTemplate[]>([]);
   const [selectedCountryId, setSelectedCountryIdState] = useState<string>("");
 
+  const refreshData = async () => {
+      const token = localStorage.getItem("accessToken");
+      // Явно указываем тип, чтобы TS не ругался на несовместимость с HeadersInit
+      const headers: Record<string, string> = {};
+      if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      try {
+        const [resC, resU, resQ] = await Promise.all([
+            fetch(`${API_URL}/countries`, { headers }),
+            fetch(`${API_URL}/admin/universities`, { headers }),
+            fetch(`${API_URL}/admin/task-templates`, { headers })
+        ]);
+
+        if (resC.ok) {
+             const cData = await resC.json();
+             setCountries(cData.map((c: any) => ({
+                 id: c.id, name: c.name, flag_icon: c.flagIcon,
+                 required_document_ids: [], required_quest_ids: [] 
+             })));
+        }
+        if (resU.ok) {
+            const uData = await resU.json();
+            setUniversities(uData.map((u: any) => ({
+                id: u.id, name: u.name, logo_url: u.logoUrl || '🎓', program_ids: [], countryId: u.countryId
+            })));
+        }
+        if (resQ.ok) {
+            const qData = await resQ.json();
+            setQuests(qData);
+        }
+      } catch (e) {
+          console.error("Failed to load data", e);
+      }
+  };
+
   useEffect(() => {
-      // Fetch countries from API
-      fetch(`${API_URL}/countries`)
-        .then(r => r.json())
-        .then(data => {
-            // Map API response to CountryProfile format if needed
-            const mapped = data.map((c: any) => ({
-                id: c.id,
-                name: c.name,
-                flag_icon: c.flagIcon,
-                required_document_ids: c.requiredDocumentIds || [],
-                required_quest_ids: c.requiredQuestIds || []
-            }));
-            setCountries(mapped);
-            
-            // Set default country from User profile if available
-            if (user?.countryId) {
-                setSelectedCountryIdState(user.countryId);
-            } else if (mapped.length > 0) {
-                setSelectedCountryIdState(mapped[0].id);
-            }
-        })
-        .catch(console.error);
+      refreshData();
   }, [user]);
+
+  useEffect(() => {
+      if (countries.length > 0 && !selectedCountryId) {
+          if (user?.countryId) {
+              setSelectedCountryIdState(user.countryId);
+          } else {
+              setSelectedCountryIdState(countries[0].id);
+          }
+      }
+  }, [countries, user]);
 
   const setSelectedCountryId = (id: string) => {
     setSelectedCountryIdState(id);
-    if (typeof window !== "undefined") localStorage.setItem("selectedCountryId", id);
   };
 
   const selectedCountry = useMemo(
@@ -116,15 +143,17 @@ export const CountryProvider: React.FC<React.PropsWithChildren> = ({ children })
     [countries, selectedCountryId]
   );
 
-  const value: Ctx = {
+  // Используем any для расширения типа контекста в рантайме, либо нужно обновить тип Ctx выше
+  const value: any = {
     countries,
     selectedCountryId,
     setSelectedCountryId,
     selectedCountry,
-    quests: questTemplates as QuestTemplate[],
+    quests, // Теперь динамические квесты
     documents: docTemplates as DocumentTemplate[],
-    universities: universityTemplates as University[],
+    universities, // Теперь динамические вузы
     programs: programTemplates as Program[],
+    refreshData, // Экспортируем функцию обновления
   };
 
   return <CountryCtx.Provider value={value}>{children}</CountryCtx.Provider>;

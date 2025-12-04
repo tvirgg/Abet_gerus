@@ -26,6 +26,8 @@ export class AuthService {
   ) {}
 
   async register(data: RegisterDto) {
+    console.log("Registering user:", data.email, "Role requested:", data.role); // LOG
+
     const company = await this.companyRepo.findOne({ where: {} }); 
     if (!company) {
         throw new Error("System not initialized: No company found. Run seeds.");

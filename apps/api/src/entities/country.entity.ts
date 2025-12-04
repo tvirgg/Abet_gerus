@@ -1,4 +1,5 @@
-import { Entity, PrimaryColumn, Column } from 'typeorm';
+import { Entity, PrimaryColumn, Column, OneToMany } from 'typeorm';
+import { University } from './university.entity';
 
 @Entity('countries')
 export class Country {
@@ -10,4 +11,7 @@ export class Country {
 
   @Column()
   flagIcon!: string;
+
+  @OneToMany(() => University, (uni) => uni.country)
+  universities!: University[];
 }

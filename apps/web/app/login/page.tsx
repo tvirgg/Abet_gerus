@@ -16,7 +16,12 @@ import { useAuth } from "@/shared/AuthContext";
    useEffect(() => {
      // Если пользователь уже залогинен, перенаправляем его
      if (auth.user) {
-       router.replace(auth.user.role === "student" ? "/student/dashboard" : "/curator/dashboard");
+       const role = auth.user.role.toLowerCase();
+       if (role === "student") {
+           router.replace("/student/dashboard");
+       } else {
+           router.replace("/curator/dashboard");
+       }
      }
    }, [auth.user, router]);
 
