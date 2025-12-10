@@ -11,6 +11,10 @@ export class TaskTemplate {
   @Column({ nullable: true })
   universityId?: string;
 
+  // --- НОВОЕ: Привязка к конкретной программе ---
+  @Column({ nullable: true })
+  programId?: number; 
+
   @Column()
   stage!: string;
 

@@ -26,7 +26,7 @@ export class AuthService {
   ) {}
 
   async register(data: RegisterDto) {
-    console.log("Registering user:", data.email, "Role requested:", data.role); // LOG
+    console.log("Registering user:", data.email, "Role requested:", data.role);
 
     const company = await this.companyRepo.findOne({ where: {} }); 
     if (!company) {
@@ -99,10 +99,12 @@ export class AuthService {
         await this.studentRepo.update({ userId: newUser.id }, { camundaProcessInstanceId: processId });
     }
 
-    // Generate Initial Tasks
+    // --- ИСПРАВЛЕНИЕ ЗДЕСЬ ---
     if (newUser.role === Role.STUDENT) {
-        await this.tasksService.generateInitialTasks(newUser.id, data.countryId || 'at');
+        // Используем новый метод syncTasksForUser вместо удаленного generateInitialTasks
+        await this.tasksService.syncTasksForUser(newUser.id);
     }
+    // -------------------------
 
     return this.login({ email: data.email, password: data.password || "12345678" });
   }
@@ -130,7 +132,7 @@ export class AuthService {
   async getProfile(userId: string) {
       const user = await this.userRepo.findOne({
           where: { id: userId },
-          relations: ['student']
+          relations: ['student', 'curator']
       });
 
       if (!user) throw new UnauthorizedException();
@@ -138,9 +140,10 @@ export class AuthService {
       return {
           id: user.id,
           email: user.email,
-          name: user.student?.fullName || user.email,
+          name: user.student?.fullName || user.curator?.fullName || user.email,
           role: user.role.toLowerCase(),
           countryId: user.student?.countryId,
+          curatorId: user.curator?.id 
       };
   }
 }

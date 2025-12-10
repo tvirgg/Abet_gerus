@@ -4,17 +4,13 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { SubmitTaskDto } from "./dto/submit-task.dto";
 import { RejectTaskDto } from "./dto/approve-task.dto";
 
-@Controller() // Корневой путь контроллера будет динамическим
+@Controller()
 @UseGuards(JwtAuthGuard)
 export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
-  // --- Student Endpoints ---
-  
   @Get("student/tasks")
   getMyTasks(@Request() req: any) {
-    // req.user.userId -> User.id. Нам нужен Student.id?
-    // В нашей схеме User.id === Student.userId. Найдем студента по userId.
     return this.tasksService.findAllForUser(req.user.userId);
   }
 
@@ -23,11 +19,8 @@ export class TasksController {
     return this.tasksService.submitTask(id, body.submission);
   }
 
-  // --- Curator Endpoints ---
-
   @Get("curator/review")
   getReviewQueue(@Request() req: any) {
-    // req.user.companyId используется для фильтрации (пока хардкод)
     return this.tasksService.getReviewQueue();
   }
 
@@ -41,8 +34,11 @@ export class TasksController {
     return this.tasksService.requestChanges(id, body.comment);
   }
 
+  // --- ИСПРАВЛЕНИЕ ЗДЕСЬ ---
   @Post("debug/generate")
   generate(@Request() req: any) {
-      return this.tasksService.generateInitialTasks(req.user.userId, 'at');
+      // Используем новый метод syncTasksForUser вместо удаленного generateInitialTasks
+      return this.tasksService.syncTasksForUser(req.user.userId);
   }
+  // -------------------------
 }

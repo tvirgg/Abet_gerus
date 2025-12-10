@@ -9,6 +9,7 @@ type User = {
   name: string;
   role: "student" | "curator" | "admin";
   countryId?: string;
+  curatorId?: string; // <-- Добавили
 };
 
 type AuthContextType = {

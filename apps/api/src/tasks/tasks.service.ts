@@ -3,13 +3,15 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { Task } from "../entities/task.entity";
 import { Student } from "../entities/student.entity";
+import { TaskTemplate } from "../entities/task-template.entity";
 import { TaskStatus } from "../entities/enums";
 
 @Injectable()
 export class TasksService {
   constructor(
     @InjectRepository(Task) private taskRepo: Repository<Task>,
-    @InjectRepository(Student) private studentRepo: Repository<Student>
+    @InjectRepository(Student) private studentRepo: Repository<Student>,
+    @InjectRepository(TaskTemplate) private templateRepo: Repository<TaskTemplate>
   ) {}
 
   async findAllForUser(userId: string) {
@@ -58,58 +60,68 @@ export class TasksService {
     if (!task) throw new NotFoundException();
 
     task.status = TaskStatus.CHANGES_REQUESTED;
-    // NOTE: If you want to save the comment, add a column to Task entity
     await this.taskRepo.save(task);
     return task;
   }
 
-  async generateInitialTasks(userId: string, countryId: string) {
-    const student = await this.studentRepo.findOne({ where: { userId } });
+  /**
+   * Основной метод: Синхронизирует задачи студента (по ID студента)
+   */
+  async syncStudentTasks(studentId: string) {
+    const student = await this.studentRepo.findOne({ where: { id: studentId } });
     if (!student) return;
 
-    const templates = [
-        {
-            stage: "Подготовка",
-            title: "Создать специальную почту Gmail",
-            xp: 20,
-            description: "Создайте новый аккаунт Gmail...",
-            country: "all"
-        },
-        {
-            stage: "Личные документы",
-            title: "Сфотографировать и загрузить загранпаспорт",
-            xp: 30,
-            description: "Сделайте качественный скан...",
-            country: "all"
-        },
-        {
-            stage: "Личные документы",
-            title: "Собрать школьные документы",
-            xp: 50,
-            description: "Аттестат и приложение...",
-            country: "at"
-        },
-        {
-            stage: "Экзамены",
-            title: "Сдать TOLC-I",
-            xp: 100,
-            description: "Регистрация на CISIA...",
-            country: "it"
-        }
-    ];
+    const programIds = student.selectedProgramIds || [];
+    const countryId = student.countryId;
 
-    const tasksToCreate = templates
-        .filter(t => t.country === 'all' || t.country === countryId)
-        .map(t => this.taskRepo.create({
+    // 1. Находим шаблоны для страны И для выбранных программ
+    const applicableTemplates = await this.templateRepo.find({
+        where: [
+            // Задачи страны (общие)
+            { countryId: countryId, programId: undefined }, // null
+            // Задачи программ
+            ...(programIds.length > 0 ? programIds.map(pid => ({ programId: pid, countryId: countryId })) : [])
+        ]
+    });
+
+    if (applicableTemplates.length === 0) return;
+
+    // 2. Проверяем, какие уже есть
+    const existingTasks = await this.taskRepo.find({
+        where: { studentId: student.id },
+        select: ['title', 'stage']
+    });
+    
+    const existingKeys = new Set(existingTasks.map(t => `${t.stage}-${t.title}`));
+
+    // 3. Создаем новые
+    const templatesToCreate = applicableTemplates.filter(tpl => 
+        !existingKeys.has(`${tpl.stage}-${tpl.title}`)
+    );
+
+    if (templatesToCreate.length > 0) {
+        const newTasks = templatesToCreate.map(t => this.taskRepo.create({
             companyId: student.companyId,
             studentId: student.id,
             stage: t.stage,
             title: t.title,
             description: t.description,
-            xpReward: t.xp,
+            xpReward: t.xpReward,
             status: TaskStatus.TODO
         }));
 
-    await this.taskRepo.save(tasksToCreate);
+        await this.taskRepo.save(newTasks);
+        console.log(`[SyncTasks] Created ${newTasks.length} new tasks for student ${student.fullName}`);
+    }
+  }
+
+  /**
+   * Хелпер: Синхронизация по User ID (для вызова из Auth и Контроллера)
+   */
+  async syncTasksForUser(userId: string) {
+      const student = await this.studentRepo.findOne({ where: { userId } });
+      if (student) {
+          await this.syncStudentTasks(student.id);
+      }
   }
 }

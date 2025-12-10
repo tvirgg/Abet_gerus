@@ -2,23 +2,13 @@
 import { useEffect, useState, useMemo } from "react";
 import { useCountry } from "@/shared/CountryContext";
 import { useAuth } from "@/shared/AuthContext";
-import StudentModal from "./StudentModal";
+import StudentModal, { StudentFull } from "./StudentModal";
 import Avatar from "@/shared/Avatar";
 import QuestDetailModal from "@/app/student/quests/QuestDetailModal";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
 
-type StudentFull = {
-  id: string;
-  fullName: string;
-  email: string;
-  countryId: string;
-  xpTotal: number;
-  isActive: boolean;
-  bindingCode: string;
-};
-
-// Simplified Task type for the Kanban
+// Типы для задач в канбане (Mock)
 type StudentTask = {
   id: number;
   title: string;
@@ -28,14 +18,13 @@ type StudentTask = {
   description: string;
 };
 
-// Mock data generator for tasks (since we don't have a direct admin-get-tasks endpoint yet)
-const generateMockTasks = (studentId: string, countryId: string): StudentTask[] => {
+// Функция-мок для генерации задач
+const generateMockTasks = (studentId: string): StudentTask[] => {
     return [
         { id: 101, title: "Создать почту Gmail", status: "DONE", xpReward: 20, stage: "Подготовка", description: "..." },
         { id: 102, title: "Загрузить паспорт", status: "REVIEW", xpReward: 30, stage: "Документы", description: "..." },
         { id: 103, title: "Апостиль аттестата", status: "CHANGES_REQUESTED", xpReward: 50, stage: "Документы", description: "..." },
         { id: 104, title: "Запись на IELTS", status: "TODO", xpReward: 80, stage: "Экзамены", description: "..." },
-        { id: 105, title: "Мотивационное письмо", status: "TODO", xpReward: 60, stage: "Творчество", description: "..." },
     ];
 };
 
@@ -46,16 +35,16 @@ export default function StudentPanelPage() {
   const [students, setStudents] = useState<StudentFull[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
   
-  // Modal state
+  // --- НОВЫЕ СОСТОЯНИЯ ---
+  const [searchTerm, setSearchTerm] = useState("");
+  const [listTab, setListTab] = useState<'my' | 'all'>('my'); // Вкладки
+  
+  // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<StudentFull | null>(null);
-
-  // Task Modal state
   const [selectedTask, setSelectedTask] = useState<StudentTask | null>(null);
 
-  // Data fetching
   const fetchStudents = async () => {
     const token = localStorage.getItem("accessToken");
     try {
@@ -65,7 +54,6 @@ export default function StudentPanelPage() {
         if(res.ok) {
             const data = await res.json();
             setStudents(data);
-            if (!selectedStudentId && data.length > 0) setSelectedStudentId(data[0].id);
         }
     } catch(e) { console.error(e); } finally { setLoading(false); }
   };
@@ -74,15 +62,39 @@ export default function StudentPanelPage() {
     fetchStudents();
   }, []);
 
-  // Filter students
+  // --- ЛОГИКА ФИЛЬТРАЦИИ ---
   const filteredStudents = useMemo(() => {
-    if (!searchTerm) return students;
-    const lower = searchTerm.toLowerCase();
-    return students.filter(s => 
-        s.fullName.toLowerCase().includes(lower) || 
-        s.email?.toLowerCase().includes(lower)
-    );
-  }, [students, searchTerm]);
+    let list = students;
+
+    // 1. Фильтр по табам "Мои" / "Все"
+    if (listTab === 'my' && user?.curatorId) {
+        list = list.filter(s => s.curatorId === user.curatorId);
+    }
+    // Если пользователь - админ, но не куратор (нет curatorId), вкладка "Мои" будет пустой, это ок.
+
+    // 2. Поиск
+    if (searchTerm) {
+        const lower = searchTerm.toLowerCase();
+        list = list.filter(s => 
+            s.fullName.toLowerCase().includes(lower) || 
+            s.email.toLowerCase().includes(lower)
+        );
+    }
+    
+    return list;
+  }, [students, searchTerm, listTab, user]);
+
+  // Автовыбор первого студента при смене списка
+  useEffect(() => {
+      if (filteredStudents.length > 0) {
+          // Если текущий выбранный студент есть в новом списке - оставляем, иначе выбираем первого
+          if (!selectedStudentId || !filteredStudents.find(s => s.id === selectedStudentId)) {
+              setSelectedStudentId(filteredStudents[0].id);
+          }
+      } else {
+          setSelectedStudentId(null);
+      }
+  }, [filteredStudents, listTab]); // selectedStudentId убрал из deps, чтобы не циклило
 
   const activeStudent = useMemo(() => 
     students.find(s => s.id === selectedStudentId), 
@@ -92,18 +104,20 @@ export default function StudentPanelPage() {
     countries.find(c => c.id === activeStudent?.countryId),
   [countries, activeStudent]);
 
-  // Tasks for Kanban
-  // In a real app, we would fetch these from API when activeStudent changes
   const studentTasks = useMemo(() => {
       if (!activeStudent) return [];
-      return generateMockTasks(activeStudent.id, activeStudent.countryId);
+      return generateMockTasks(activeStudent.id);
   }, [activeStudent]);
 
-  // Admin Actions
   const handleSaveStudent = async (data: any) => {
     const token = localStorage.getItem("accessToken");
     let res;
     
+    // Если создает куратор, и curatorId не задан явно - присваиваем себе
+    if (!data.id && user?.curatorId && !data.curatorId) {
+        data.curatorId = user.curatorId;
+    }
+
     if (data.id) {
         res = await fetch(`${API_URL}/admin/students/${data.id}`, {
             method: "PATCH",
@@ -128,7 +142,6 @@ export default function StudentPanelPage() {
 
   if (loading) return <div className="p-8 text-zinc-500">Загрузка данных...</div>;
 
-  // Kanban Columns Data
   const columns = {
     todo: studentTasks.filter(t => t.status === "TODO"),
     review: studentTasks.filter(t => t.status === "REVIEW" || t.status === "CHANGES_REQUESTED"),
@@ -139,27 +152,43 @@ export default function StudentPanelPage() {
     <div className="h-[calc(100vh-6rem)] flex flex-col">
       <div className="mb-4">
         <h1 className="text-2xl font-semibold">Студенты</h1>
-        <p className="text-zinc-400 text-sm">База данных абитуриентов и управление задачами.</p>
+        <p className="text-zinc-400 text-sm">Управление базой студентов и задачами.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-6 h-full overflow-hidden">
+      <div className="grid grid-cols-1 md:grid-cols-[320px_1fr] gap-6 h-full overflow-hidden">
         
-        {/* === Left Column: Student List === */}
+        {/* === Левая колонка: Список === */}
         <div className="card flex flex-col overflow-hidden bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
             <div className="p-3 border-b border-zinc-100 dark:border-zinc-800 space-y-3">
-                {/* Search */}
+                {/* Табы */}
+                <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl">
+                    <button 
+                        onClick={() => setListTab('my')}
+                        className={`flex-1 text-xs font-medium py-1.5 rounded-lg transition ${listTab === 'my' ? 'bg-white dark:bg-zinc-700 shadow-sm text-black dark:text-white' : 'text-zinc-500 hover:text-zinc-700'}`}
+                    >
+                        Мои студенты
+                    </button>
+                    <button 
+                        onClick={() => setListTab('all')}
+                        className={`flex-1 text-xs font-medium py-1.5 rounded-lg transition ${listTab === 'all' ? 'bg-white dark:bg-zinc-700 shadow-sm text-black dark:text-white' : 'text-zinc-500 hover:text-zinc-700'}`}
+                    >
+                        Все студенты
+                    </button>
+                </div>
+
+                {/* Поиск */}
                 <div className="relative">
                     <input 
                         type="text" 
-                        placeholder="Поиск..." 
+                        placeholder="Поиск по имени..." 
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
-                        className="w-full bg-zinc-100 dark:bg-zinc-800 border-none rounded-xl py-2 pl-9 pr-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full bg-zinc-50 dark:bg-zinc-800 border-none rounded-xl py-2 pl-9 pr-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                     />
                     <span className="absolute left-3 top-2.5 text-zinc-400">🔍</span>
                 </div>
                 
-                {/* Add Button */}
+                {/* Кнопка добавить */}
                 {user?.role === 'admin' && (
                     <button 
                         onClick={() => { setEditingStudent(null); setIsModalOpen(true); }}
@@ -172,28 +201,38 @@ export default function StudentPanelPage() {
             
             <div className="overflow-y-auto p-2 flex-1">
                 {filteredStudents.length === 0 ? (
-                    <div className="text-center py-8 text-zinc-500 text-sm">Нет студентов</div>
+                    <div className="text-center py-8 text-zinc-500 text-sm">
+                         {searchTerm ? "Ничего не найдено" : (listTab === 'my' ? "У вас нет студентов" : "Список пуст")}
+                    </div>
                 ) : (
                     <ul className="space-y-1">
                         {filteredStudents.map(student => (
                             <li key={student.id}>
                                 <button
                                     onClick={() => setSelectedStudentId(student.id)}
-                                    className={`w-full text-left px-3 py-3 rounded-xl transition flex items-center gap-3 ${
+                                    className={`w-full text-left px-3 py-3 rounded-xl transition flex items-center gap-3 relative ${
                                         selectedStudentId === student.id 
                                         ? "bg-black text-white dark:bg-zinc-800 shadow-md" 
                                         : "hover:bg-zinc-100 dark:hover:bg-zinc-800/50"
                                     }`}
                                 >
-                                    <Avatar name={student.fullName} level={Math.floor(student.xpTotal/200)+1} className="w-8 h-8 text-xs" />
+                                    <Avatar name={student.fullName} level={Math.floor(student.xpTotal/200)+1} className="w-8 h-8 text-xs shrink-0" />
                                     <div className="overflow-hidden flex-1">
                                         <div className="font-medium text-sm truncate">{student.fullName}</div>
-                                        <div className={`text-xs truncate ${selectedStudentId === student.id ? "text-zinc-400" : "text-zinc-500"}`}>
-                                            {student.email}
+                                        <div className="flex items-center gap-2 text-[10px] opacity-70">
+                                            <span className="truncate">{student.email}</span>
                                         </div>
                                     </div>
+                                    
+                                    {/* Если смотрим общий список - показываем чей студент */}
+                                    {listTab === 'all' && student.curatorName && (
+                                        <div className={`text-[9px] px-1.5 py-0.5 rounded border ${selectedStudentId === student.id ? "border-zinc-600 bg-zinc-700 text-zinc-300" : "border-zinc-200 bg-zinc-100 text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800"}`}>
+                                            {student.curatorName.split(' ')[0]}
+                                        </div>
+                                    )}
+
                                     {!student.isActive && (
-                                        <span className="w-2 h-2 rounded-full bg-red-500" title="Отключен"></span>
+                                        <span className="w-2 h-2 rounded-full bg-red-500 absolute top-2 right-2" title="Отключен"></span>
                                     )}
                                 </button>
                             </li>
@@ -203,7 +242,7 @@ export default function StudentPanelPage() {
             </div>
         </div>
 
-        {/* === Right Column: Kanban Dashboard === */}
+        {/* === Правая колонка: Канбан и Инфо === */}
         {activeStudent ? (
             <div className="flex flex-col h-full overflow-hidden">
                 {/* Header Info */}
@@ -216,8 +255,12 @@ export default function StudentPanelPage() {
                                 <span>{activeCountry?.flag_icon} {activeCountry?.name || "Нет страны"}</span>
                                 <span>•</span>
                                 <span className="font-mono text-blue-500">{activeStudent.bindingCode}</span>
-                                <span>•</span>
-                                <span className="text-yellow-600 font-bold">{activeStudent.xpTotal} XP</span>
+                                {activeStudent.curatorName && (
+                                    <>
+                                        <span>•</span>
+                                        <span>Куратор: {activeStudent.curatorName}</span>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -226,7 +269,7 @@ export default function StudentPanelPage() {
                              onClick={() => { setEditingStudent(activeStudent); setIsModalOpen(true); }}
                              className="text-xs bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 px-3 py-1.5 rounded-lg transition"
                         >
-                            {user?.role === 'admin' ? '⚙️ Настройки' : '👁️ Профиль'}
+                            Настройки
                         </button>
                     </div>
                 </div>
@@ -294,13 +337,8 @@ export default function StudentPanelPage() {
       )}
 
       {selectedTask && (
-          // Reusing the existing Quest Detail Modal for viewing
           <QuestDetailModal 
-            quest={{
-                ...selectedTask, 
-                // Adding missing props for modal compatibility
-                submission: null 
-            } as any} 
+            quest={{ ...selectedTask, submission: null } as any} 
             onClose={() => setSelectedTask(null)} 
           />
       )}
@@ -308,7 +346,6 @@ export default function StudentPanelPage() {
   );
 }
 
-// Subcomponent for Task Card
 function TaskCard({ task, onClick }: { task: StudentTask; onClick: () => void }) {
     const isReview = task.status === 'REVIEW';
     const isChanges = task.status === 'CHANGES_REQUESTED';

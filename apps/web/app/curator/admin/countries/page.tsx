@@ -1,107 +1,69 @@
 "use client";
 import { useEffect, useState, useMemo } from "react";
-import { useCountry } from "@/shared/CountryContext";
+import { useCountry, Program } from "../../../../shared/CountryContext";
 import QuestEditor from "./QuestEditor";
 import ProgramEditModal from "./ProgramEditModal";
+import UniversityAccordion from "./UniversityAccordion";
+import ProgramDetailModal from "./ProgramDetailModal";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
 
 export default function ConfiguratorPage() {
-  // @ts-ignore - refreshData injected via any
   const { countries, universities, refreshData, quests } = useCountry();
   const [selectedCountryId, setSelectedCountryId] = useState<string | null>(null);
-  const [selectedUniversityId, setSelectedUniversityId] = useState<string | null>(null);
   
-  // Tab state for the 3rd column
-  const [configTab, setConfigTab] = useState<'tasks' | 'programs'>('tasks');
-  const [programs, setPrograms] = useState<any[]>([]); // Инициализируем массивом
-  const [editingProgram, setEditingProgram] = useState<any | null>(null);
+  // Состояние
+  const [programs, setPrograms] = useState<Program[]>([]);
+  const [loadingPrograms, setLoadingPrograms] = useState(false);
+  
+  // Модальные окна
+  const [editingProgram, setEditingProgram] = useState<Program | null>(null);
+  const [viewingProgram, setViewingProgram] = useState<Program | null>(null);
   const [isProgramModalOpen, setIsProgramModalOpen] = useState(false);
+  const [activeUniversityIdForCreate, setActiveUniversityIdForCreate] = useState<string | null>(null);
 
+  // Инициализация страны
   useEffect(() => {
       if (countries.length > 0 && !selectedCountryId) {
           setSelectedCountryId(countries[0].id);
       }
   }, [countries]);
 
-  const filteredUniversities = useMemo(() => {
-      return universities.filter((u: any) => u.countryId === selectedCountryId);
-  }, [universities, selectedCountryId]);
-  
-  // --- ИСПРАВЛЕНИЕ ЗДЕСЬ ---
-  // Fetch programs whenever university changes
+  // Загрузка программ при смене страны (загружаем все программы этой страны сразу для оптимизации UI)
   useEffect(() => {
-      if (selectedUniversityId) {
+      if (selectedCountryId) {
+          setLoadingPrograms(true);
           const token = localStorage.getItem("accessToken");
-          fetch(`${API_URL}/admin/programs/search?universityId=${selectedUniversityId}`, {
+          fetch(`${API_URL}/admin/programs/search?countryId=${selectedCountryId}`, {
               headers: { Authorization: `Bearer ${token}` }
           })
           .then(async (res) => {
               if (res.ok) {
                   const data = await res.json();
-                  // Проверяем, что пришел именно массив
-                  if (Array.isArray(data)) {
-                      setPrograms(data);
-                  } else {
-                      console.error("API Error: Programs data is not an array", data);
-                      setPrograms([]);
-                  }
-              } else {
-                  console.error("API Error status:", res.status);
-                  setPrograms([]);
+                  setPrograms(Array.isArray(data) ? data : []);
               }
           })
-          .catch(err => {
-              console.error("Fetch failed", err);
-              setPrograms([]);
-          });
-      } else {
-          setPrograms([]);
+          .finally(() => setLoadingPrograms(false));
       }
-  }, [selectedUniversityId]);
+  }, [selectedCountryId]);
 
+  // Фильтруем университеты текущей страны
+  const filteredUniversities = useMemo(() => {
+      return universities.filter((u: any) => u.countryId === selectedCountryId);
+  }, [universities, selectedCountryId]);
+  
+  // Профиль задач для страны (для редактора задач)
   const currentProfile = useMemo(() => {
-      const assignedQuests = quests.filter((q: any) => {
-          if (selectedUniversityId) return q.universityId === selectedUniversityId;
-          return q.countryId === selectedCountryId;
-      });
-      
+      const assignedQuests = quests.filter((q: any) => q.countryId === selectedCountryId);
       return {
-          universityId: selectedUniversityId || "country-level",
+          universityId: "country-level",
           countryId: selectedCountryId || "",
           assignedQuests
       };
-  }, [selectedUniversityId, selectedCountryId, quests]);
+  }, [selectedCountryId, quests]);
 
-  // API Actions
-  const saveTaskTemplate = async (task: any) => {
-      const token = localStorage.getItem("accessToken");
-      const payload = {
-          ...task,
-          universityId: selectedUniversityId, 
-          countryId: !selectedUniversityId ? selectedCountryId : undefined 
-      };
-      if (task.id < 0) delete payload.id; // New task
+  // --- CRUD Actions ---
 
-      const res = await fetch(`${API_URL}/admin/task-templates`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify(payload)
-      });
-      
-      if (res.ok) await refreshData();
-  };
-  
-  const deleteTaskTemplate = async (id: number) => {
-       const token = localStorage.getItem("accessToken");
-       await fetch(`${API_URL}/admin/task-templates/${id}`, {
-           method: "DELETE",
-           headers: { Authorization: `Bearer ${token}` }
-       });
-       await refreshData();
-  }
-  
-  // Program Actions
   const handleSaveProgram = async (data: any) => {
       const token = localStorage.getItem("accessToken");
       const method = data.id ? "PATCH" : "POST";
@@ -114,14 +76,12 @@ export default function ConfiguratorPage() {
       });
       
       if (res.ok) {
-          // Refresh programs list safely
-           fetch(`${API_URL}/admin/programs/search?universityId=${selectedUniversityId}`, {
+           // Refresh list locally (simplified) or refetch
+           // Refetching is safer
+           const resP = await fetch(`${API_URL}/admin/programs/search?countryId=${selectedCountryId}`, {
               headers: { Authorization: `Bearer ${token}` }
-          })
-          .then(r => r.json())
-          .then(data => {
-             if(Array.isArray(data)) setPrograms(data);
-          });
+           });
+           setPrograms(await resP.json());
       }
   };
 
@@ -129,117 +89,144 @@ export default function ConfiguratorPage() {
        if(!confirm("Удалить программу?")) return;
        const token = localStorage.getItem("accessToken");
        await fetch(`${API_URL}/admin/programs/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
-       // Refresh locally
-       setPrograms(prev => Array.isArray(prev) ? prev.filter(p => p.id !== id) : []);
-  }
+       setPrograms(prev => prev.filter(p => p.id !== id));
+  };
+  
+  // Tasks Logic (сохранено с предыдущей версии)
+  const saveTaskTemplate = async (task: any) => {
+    const token = localStorage.getItem("accessToken");
+    const payload = { ...task, countryId: selectedCountryId };
+    if (task.id < 0) delete payload.id;
+    await fetch(`${API_URL}/admin/task-templates`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload)
+    });
+    await refreshData();
+  };
+
+  const deleteTaskTemplate = async (id: number) => {
+    const token = localStorage.getItem("accessToken");
+    await fetch(`${API_URL}/admin/task-templates/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+    await refreshData();
+  };
 
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
         <div>
-          <h1 className="text-2xl font-semibold">Страны и Программы</h1>
-          <p className="text-zinc-400 text-sm">Управление данными в БД.</p>
+          <h1 className="text-2xl font-semibold">База знаний</h1>
+          <p className="text-zinc-400 text-sm">Управление странами, вузами и программами.</p>
         </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[calc(100vh-12rem)]">
-        {/* Countries */}
-        <div className="card p-3 overflow-y-auto">
-          <h2 className="font-semibold px-2 mb-2">Страны</h2>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[250px_1fr_350px] gap-6 h-[calc(100vh-12rem)]">
+        
+        {/* Col 1: Страны */}
+        <div className="card p-3 overflow-y-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+          <h2 className="font-semibold px-2 mb-3 text-sm uppercase text-zinc-500">Страны</h2>
           <ul className="space-y-1">
             {countries.map((c: any) => (
               <li key={c.id}>
                 <button
-                  onClick={() => { setSelectedCountryId(c.id); setSelectedUniversityId(null); setConfigTab('tasks'); }}
-                  className={`w-full text-left px-3 py-2 rounded-lg transition ${selectedCountryId === c.id ? 'bg-blue-600 text-white' : 'hover:bg-zinc-700'}`}
+                  onClick={() => setSelectedCountryId(c.id)}
+                  className={`w-full text-left px-3 py-2 rounded-lg transition text-sm flex items-center gap-2 ${
+                    selectedCountryId === c.id 
+                    ? 'bg-blue-600 text-white shadow-md' 
+                    : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
+                  }`}
                 >
-                  {c.flag_icon} {c.name}
+                  <span className="text-lg">{c.flag_icon}</span> {c.name}
                 </button>
               </li>
             ))}
           </ul>
+          <button className="mt-4 w-full py-2 border border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-zinc-500 hover:border-blue-500 hover:text-blue-500 transition">
+              + Добавить страну
+          </button>
         </div>
 
-        {/* Universities */}
-        <div className="card p-3 overflow-y-auto">
-          <h2 className="font-semibold px-2 mb-2">Университеты</h2>
-          {filteredUniversities.length > 0 ? (
-              <ul className="space-y-1">
-                  {filteredUniversities.map((uni: any) => (
-                      <li key={uni.id}>
-                          <button
-                              onClick={() => { setSelectedUniversityId(uni.id); setConfigTab('programs'); }}
-                              className={`w-full text-left px-3 py-2 rounded-lg transition ${selectedUniversityId === uni.id ? 'bg-blue-600 text-white' : 'hover:bg-zinc-700'}`}
-                          >
-                              {uni.logo_url} {uni.name}
-                          </button>
-                      </li>
-                  ))}
-              </ul>
-          ) : <p className="text-zinc-500 text-sm px-2">Нет университетов</p>}
+        {/* Col 2: Университеты и Программы (Аккордеон) */}
+        <div className="flex flex-col gap-4 overflow-hidden">
+            <div className="flex justify-between items-center px-1">
+                 <h2 className="font-semibold">Университеты и Программы</h2>
+                 <button className="text-xs bg-zinc-200 dark:bg-zinc-800 px-3 py-1.5 rounded-lg hover:bg-zinc-300 transition">
+                     + Добавить ВУЗ
+                 </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto pr-2">
+                {filteredUniversities.length === 0 ? (
+                    <div className="text-center py-10 text-zinc-500">В этой стране пока нет университетов</div>
+                ) : (
+                    <div className="space-y-3">
+                        {filteredUniversities.map((uni: any) => (
+                            <div key={uni.id} className="relative group">
+                                <UniversityAccordion
+                                    university={uni}
+                                    programs={programs.filter(p => p.university_id === uni.id || (p as any).universityId === uni.id)} // Учитываем разницу в нейминге API/Mock
+                                    onSelectProgram={(p) => setViewingProgram(p)}
+                                    onEditProgram={(p) => { setEditingProgram(p); setActiveUniversityIdForCreate(uni.id); setIsProgramModalOpen(true); }}
+                                    onDeleteProgram={handleDeleteProgram}
+                                />
+                                {/* Кнопка добавления программы, появляется при наведении на группу вуза (можно улучшить UX) */}
+                                <div className="absolute right-14 top-4 opacity-0 group-hover:opacity-100 transition">
+                                    <button 
+                                        onClick={(e) => { 
+                                            e.stopPropagation(); 
+                                            setEditingProgram(null); 
+                                            setActiveUniversityIdForCreate(uni.id); 
+                                            setIsProgramModalOpen(true); 
+                                        }}
+                                        className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-2 py-1 rounded shadow-sm hover:bg-blue-200"
+                                    >
+                                        + Программа
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
         </div>
 
-        {/* Config Column (Tasks or Programs) */}
-        <div className="card p-3 overflow-y-auto">
-          {/* Tabs */}
-          <div className="flex border-b border-zinc-200 dark:border-zinc-700 mb-3">
-             <button 
-                onClick={() => setConfigTab('tasks')}
-                className={`flex-1 py-2 text-sm font-medium ${configTab === 'tasks' ? 'border-b-2 border-blue-500 text-blue-500' : 'text-zinc-500'}`}
-             >
-                 Задачи
-             </button>
-             <button 
-                onClick={() => setConfigTab('programs')}
-                disabled={!selectedUniversityId}
-                className={`flex-1 py-2 text-sm font-medium ${configTab === 'programs' ? 'border-b-2 border-blue-500 text-blue-500' : 'text-zinc-500 disabled:opacity-50'}`}
-             >
-                 Программы
-             </button>
-          </div>
-
-          {configTab === 'tasks' ? (
-            <QuestEditor
+        {/* Col 3: Задачи страны (Беклог) */}
+        <div className="card p-3 overflow-y-auto bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+             <div className="mb-4">
+                 <h2 className="font-semibold text-sm">Беклог задач страны</h2>
+                 <p className="text-xs text-zinc-500">Задачи, применяемые ко всем студентам в {countries.find(c => c.id === selectedCountryId)?.name}</p>
+             </div>
+             
+             <QuestEditor
                 profile={currentProfile}
                 onUpdateProfile={() => {}} 
                 apiSave={saveTaskTemplate}
                 apiDelete={deleteTaskTemplate}
             />
-          ) : (
-            <div>
-                <div className="p-2">
-                    <button onClick={() => { setEditingProgram(null); setIsProgramModalOpen(true); }} className="btn btn-primary w-full text-sm">
-                    + Добавить программу
-                    </button>
-                </div>
-                <ul className="space-y-2 mt-2">
-                    {/* --- ИСПРАВЛЕНИЕ ЗДЕСЬ: Добавлена проверка на массив --- */}
-                    {Array.isArray(programs) && programs.map((prog: any) => (
-                        <li key={prog.id} className="p-3 rounded-lg bg-zinc-800 border border-zinc-700">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <div className="font-semibold text-sm">{prog.title}</div>
-                                    <div className="text-xs text-zinc-500">Дедлайн: {prog.deadline}</div>
-                                </div>
-                                <div className="flex gap-2">
-                                    <button onClick={() => { setEditingProgram(prog); setIsProgramModalOpen(true); }} className="text-xs text-blue-400">Ред.</button>
-                                    <button onClick={() => handleDeleteProgram(prog.id)} className="text-xs text-red-400">X</button>
-                                </div>
-                            </div>
-                        </li>
-                    ))}
-                    {(!Array.isArray(programs) || programs.length === 0) && <p className="text-center text-xs text-zinc-500 mt-4">Нет программ</p>}
-                </ul>
-            </div>
-          )}
         </div>
       </div>
       
-      {isProgramModalOpen && selectedUniversityId && (
+      {/* Модалка редактирования/создания программы */}
+      {isProgramModalOpen && activeUniversityIdForCreate && (
         <ProgramEditModal
             program={editingProgram}
-            universityId={selectedUniversityId}
+            universityId={activeUniversityIdForCreate}
             onSave={handleSaveProgram}
             onClose={() => setIsProgramModalOpen(false)}
+        />
+      )}
+
+      {/* Модалка просмотра программы (карточка) */}
+      {viewingProgram && (
+        <ProgramDetailModal
+            program={viewingProgram}
+            onClose={() => setViewingProgram(null)}
+            onEdit={() => {
+                setEditingProgram(viewingProgram);
+                setActiveUniversityIdForCreate(viewingProgram.university_id || (viewingProgram as any).universityId);
+                setViewingProgram(null);
+                setIsProgramModalOpen(true);
+            }}
         />
       )}
     </div>

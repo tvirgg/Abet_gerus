@@ -83,6 +83,12 @@ export class AdminController {
   getStudents() {
     return this.adminService.getStudents();
   }
+
+  @Patch("students/:id")
+  updateStudent(@Param("id") id: string, @Body() body: any) {
+    // В AdminService нужно убедиться, что метод называется updateStudentAdmin (как мы сделали выше)
+    return this.adminService.updateStudentAdmin(id, body);
+  }
   
   @Patch("users/:id/reset-password")
   resetPassword(@Param("id") id: string, @Body("password") password?: string) {

@@ -18,6 +18,8 @@ export type CountryProfile = {
 
 export type QuestTemplate = {
   id: number;
+  countryId?: number;
+  universityId?: number;
   stage: string;
   title: string;
   xpReward: number; // Renamed from xp
@@ -61,6 +63,7 @@ type Ctx = {
   documents: DocumentTemplate[];
   universities: University[];
   programs: Program[];
+  refreshData: () => Promise<void>;
 };
 
 const CountryCtx = createContext<Ctx | null>(null);

@@ -10,7 +10,7 @@ export default function StudentDossierPage() {
   const params = useParams();
   const studentId = params.studentId as string;
   
-  const { countries, quests: allQuests } = useCountry();
+  const { countries, quests: allQuests, programs: allPrograms } = useCountry();
   const [student, setStudent] = useState<any>(null);
   const [tasks, setTasks] = useState<any[]>([]);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -57,6 +57,12 @@ export default function StudentDossierPage() {
 
   // Mock quests filter (в реальности данные придут с бэка)
   const requiredQuests = allQuests; // Пока показываем все шаблоны как пример
+
+  // Вычисляем программы из контекста useCountry (так как мы уже их загрузили там)
+  const selectedProgramsData = useMemo(() => {
+    if (!student?.selectedProgramIds) return [];
+    return (allPrograms || []).filter(p => student.selectedProgramIds.includes(p.id));
+  }, [student, allPrograms]);
 
   const handleResetPassword = async () => {
       if(!confirm("Сбросить пароль студента на '12345678'?")) return;
@@ -116,6 +122,26 @@ export default function StudentDossierPage() {
             </div>
             <button onClick={() => setIsTaskModalOpen(true)} className="btn btn-primary text-sm">+ Задача</button>
         </div>
+      </div>
+
+      {/* Блок целевых программ */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold mb-3">Целевые программы</h2>
+        {selectedProgramsData.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {selectedProgramsData.map(prog => (
+              <div key={prog.id} className="p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/50 rounded-xl flex items-center justify-between">
+                <div>
+                  <div className="font-medium text-sm">{prog.title}</div>
+                  <div className="text-xs text-zinc-500">Дедлайн: {prog.deadline || "—"}</div>
+                </div>
+                {/* Если есть университет в объекте, можно вывести лого */}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-zinc-500 italic">Программы не выбраны.</p>
+        )}
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
