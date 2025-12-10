@@ -318,6 +318,10 @@ my-abiturient/
         └── .gitignore
         └── package.json
         └── src/
+            └── admin/
+                └── admin.controller.ts
+                └── admin.module.ts
+                └── admin.service.ts
             └── app.module.ts
             └── auth/
                 └── auth.controller.ts
@@ -340,12 +344,24 @@ my-abiturient/
             └── entities/
                 └── company.entity.ts
                 └── country.entity.ts
+                └── curator.entity.ts
                 └── enums.ts
+                └── program.entity.ts
                 └── student.entity.ts
+                └── task-template.entity.ts
                 └── task.entity.ts
+                └── university.entity.ts
                 └── user.entity.ts
+            └── files/
+                └── files.controller.ts
+                └── files.module.ts
+                └── files.service.ts
             └── main.ts
             └── seed.ts
+            └── students/
+                └── students.controller.ts
+                └── students.module.ts
+                └── students.service.ts
             └── tasks/
                 └── dto/
                     └── approve-task.dto.ts
@@ -361,22 +377,28 @@ my-abiturient/
             └── curator/
                 └── admin/
                     └── countries/
+                        └── ProgramEditModal.tsx
                         └── QuestEditModal.tsx
                         └── QuestEditor.tsx
-                        └── UniversityList.tsx
+                        └── page.tsx
+                    └── moderators/
+                        └── ModeratorModal.tsx
                         └── page.tsx
                 └── calendar/
                     └── page.tsx
                 └── dashboard/
                     └── page.tsx
                 └── layout.tsx
+                └── programs-search/
+                    └── page.tsx
                 └── review/
                     └── page.tsx
                 └── student/
                     └── [studentId]/
+                        └── EditProfileModal.tsx
                         └── page.tsx
                 └── students/
-                    └── AddStudentModal.tsx
+                    └── StudentModal.tsx
                     └── page.tsx
             └── globals.css
             └── layout.tsx
@@ -419,6 +441,7 @@ my-abiturient/
         └── postcss.config.mjs
         └── shared/
             └── AuthContext.tsx
+            └── Avatar.tsx
             └── Calendar.tsx
             └── CountryContext.tsx
             └── CountrySwitcher.tsx
@@ -430,6 +453,7 @@ my-abiturient/
                 └── auth.spec.ts
         └── tsconfig.json
 └── docker/
+└── docker-compose.override.yml
 └── docker-compose.yml
     └── api.Dockerfile
     └── web.Dockerfile
@@ -61160,7 +61184,8 @@ node_modules
     "pg": "^8.11.3",
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.0",
-    "typeorm": "^0.3.20"
+    "typeorm": "^0.3.20",
+    "minio": "^7.1.3"
   },
   "devDependencies": {
     "@nestjs/testing": "^10.4.20",
@@ -61168,6 +61193,7 @@ node_modules
     "@types/node": "^20",
     "@types/passport-jwt": "^3.0.8",
     "@types/supertest": "^6.0.0",
+    "@types/multer": "^1.4.11",
     "dotenv": "^16.6.1",
     "jest": "^29.7.0",
     "rimraf": "^5.0.5",
@@ -61197,6 +61223,320 @@ node_modules
 }
 --- END FILE: apps/api/package.json ---
 
+--- BEGIN FILE: apps/api/src/admin/admin.controller.ts ---
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { AdminService } from "./admin.service";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+
+@Controller("admin")
+@UseGuards(JwtAuthGuard)
+export class AdminController {
+  constructor(private readonly adminService: AdminService) {}
+
+  @Post("countries")
+  createCountry(@Body() dto: any) {
+    return this.adminService.createCountry(dto);
+  }
+
+  @Get("universities")
+  getUniversities() {
+    return this.adminService.getUniversities();
+  }
+
+  @Post("universities")
+  createUniversity(@Body() dto: any) {
+    return this.adminService.createUniversity(dto);
+  }
+
+  @Get("task-templates")
+  getTaskTemplates() {
+    return this.adminService.getTaskTemplates();
+  }
+
+  @Post("task-templates")
+  createTaskTemplate(@Body() dto: any) {
+    return this.adminService.createTaskTemplate(dto);
+  }
+
+  @Delete("task-templates/:id")
+  deleteTaskTemplate(@Param("id") id: string) {
+      return this.adminService.deleteTaskTemplate(Number(id));
+  }
+
+  // --- Programs Endpoints (ВАЖНО: этот блок должен быть здесь) ---
+  @Get("programs/search")
+  searchPrograms(
+    @Query("countryId") countryId?: string,
+    @Query("universityId") universityId?: string,
+    @Query("category") category?: string,
+    @Query("search") search?: string
+  ) {
+    return this.adminService.searchPrograms({ countryId, universityId, category, search });
+  }
+
+  @Post("programs")
+  createProgram(@Body() dto: any) {
+    return this.adminService.createProgram(dto);
+  }
+
+  @Patch("programs/:id")
+  updateProgram(@Param("id") id: string, @Body() dto: any) {
+    return this.adminService.updateProgram(Number(id), dto);
+  }
+
+  @Delete("programs/:id")
+  deleteProgram(@Param("id") id: string) {
+    return this.adminService.deleteProgram(Number(id));
+  }
+  // -----------------------------------------------------------
+
+  @Get("moderators")
+  getModerators() {
+    return this.adminService.getModerators();
+  }
+
+  @Post("moderators")
+  createModerator(@Body() dto: any) {
+    return this.adminService.createModerator(dto);
+  }
+
+  @Patch("moderators/:id")
+  updateModerator(@Param("id") id: string, @Body() dto: any) {
+    return this.adminService.updateModerator(id, dto);
+  }
+
+  @Get("students")
+  getStudents() {
+    return this.adminService.getStudents();
+  }
+  
+  @Patch("users/:id/reset-password")
+  resetPassword(@Param("id") id: string, @Body("password") password?: string) {
+      return this.adminService.resetPassword(id, password);
+  }
+}
+--- END FILE: apps/api/src/admin/admin.controller.ts ---
+
+--- BEGIN FILE: apps/api/src/admin/admin.module.ts ---
+import { Module } from "@nestjs/common";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { AdminController } from "./admin.controller";
+import { AdminService } from "./admin.service";
+import { Country } from "../entities/country.entity";
+import { University } from "../entities/university.entity";
+import { Program } from "../entities/program.entity"; // Импорт
+import { TaskTemplate } from "../entities/task-template.entity";
+import { User } from "../entities/user.entity";
+import { Student } from "../entities/student.entity";
+import { Company } from "../entities/company.entity";
+import { Curator } from "../entities/curator.entity";
+
+@Module({
+  imports: [
+    TypeOrmModule.forFeature([
+      Country, 
+      University, 
+      Program, // <--- Обязательно здесь
+      TaskTemplate, 
+      User, 
+      Student, 
+      Company, 
+      Curator
+    ])
+  ],
+  controllers: [AdminController],
+  providers: [AdminService],
+})
+export class AdminModule {}
+--- END FILE: apps/api/src/admin/admin.module.ts ---
+
+--- BEGIN FILE: apps/api/src/admin/admin.service.ts ---
+import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { Country } from "../entities/country.entity";
+import { University } from "../entities/university.entity";
+import { TaskTemplate } from "../entities/task-template.entity";
+import { User } from "../entities/user.entity";
+import { Student } from "../entities/student.entity";
+import { Company } from "../entities/company.entity";
+import { Curator } from "../entities/curator.entity";
+import { Role } from "../entities/enums";
+import { Program } from "../entities/program.entity"; // Не забудьте импорт
+
+const hashPassword = (pwd: string) => `hashed_${pwd}`;
+
+@Injectable()
+export class AdminService {
+  constructor(
+    @InjectRepository(Country) private countryRepo: Repository<Country>,
+    @InjectRepository(University) private uniRepo: Repository<University>,
+    @InjectRepository(TaskTemplate) private taskTplRepo: Repository<TaskTemplate>,
+    @InjectRepository(User) private userRepo: Repository<User>,
+    @InjectRepository(Student) private studentRepo: Repository<Student>,
+    @InjectRepository(Company) private companyRepo: Repository<Company>,
+    @InjectRepository(Curator) private curatorRepo: Repository<Curator>,
+    @InjectRepository(Program) private programRepo: Repository<Program>, // Инъекция репозитория
+  ) {}
+
+  async getModerators() {
+    const curators = await this.userRepo.find({
+      where: { role: Role.CURATOR },
+      relations: ['curator'], 
+      select: ['id', 'email', 'companyId', 'isActive', 'createdAt']
+    });
+    
+    const students = await this.studentRepo.find({
+      select: ['id', 'fullName', 'countryId', 'xpTotal']
+    });
+
+    return { curators, students };
+  }
+
+  async getStudents() {
+    const students = await this.studentRepo.find({
+      relations: ['user'],
+      order: { fullName: 'ASC' }
+    });
+    
+    return students.map(s => ({
+      id: s.id,
+      fullName: s.fullName,
+      countryId: s.countryId,
+      xpTotal: s.xpTotal,
+      userId: s.userId,
+      email: s.user?.email,
+      isActive: s.user?.isActive
+    }));
+  }
+
+  async createModerator(data: any) {
+    const email = data.email;
+    const existing = await this.userRepo.findOne({ where: { email } });
+    if (existing) throw new BadRequestException("User already exists");
+
+    const company = await this.companyRepo.findOne({ where: {} });
+    if (!company) throw new BadRequestException("No company found");
+
+    const password = data.password || Math.random().toString(36).slice(-8);
+
+    const user = this.userRepo.create({
+      email,
+      passwordHash: hashPassword(password),
+      role: Role.CURATOR,
+      companyId: company.id,
+      isActive: true
+    });
+
+    const savedUser = await this.userRepo.save(user);
+
+    const curator = this.curatorRepo.create({
+        userId: savedUser.id,
+        companyId: company.id,
+        fullName: data.fullName || email.split('@')[0],
+        specialization: data.specialization || "Куратор",
+        bio: data.bio || "",
+        avatarUrl: data.avatarUrl || ""
+    });
+    await this.curatorRepo.save(curator);
+
+    return { ...savedUser, curator, generatedPassword: password };
+  }
+
+  async updateModerator(id: string, data: any) {
+    const user = await this.userRepo.findOne({ 
+        where: { id },
+        relations: ['curator']
+    });
+    if (!user) throw new NotFoundException("User not found");
+
+    if (data.email) user.email = data.email;
+    if (typeof data.isActive === 'boolean') user.isActive = data.isActive;
+    if (data.password) {
+        user.passwordHash = hashPassword(data.password);
+    }
+
+    await this.userRepo.save(user);
+
+    let curator = user.curator;
+    if (!curator) {
+        curator = this.curatorRepo.create({ userId: user.id, companyId: user.companyId });
+    }
+
+    if (data.fullName !== undefined) curator.fullName = data.fullName;
+    if (data.specialization !== undefined) curator.specialization = data.specialization;
+    if (data.bio !== undefined) curator.bio = data.bio;
+    if (data.avatarUrl !== undefined) curator.avatarUrl = data.avatarUrl;
+
+    await this.curatorRepo.save(curator);
+
+    return { ...user, curator };
+  }
+
+  async createCountry(data: Partial<Country>) {
+    return this.countryRepo.save(data);
+  }
+
+  async getUniversities() {
+    return this.uniRepo.find({ relations: ['country'] });
+  }
+
+  async createUniversity(data: Partial<University>) {
+    return this.uniRepo.save(data);
+  }
+
+  async getTaskTemplates() {
+    return this.taskTplRepo.find({ order: { id: 'ASC' } });
+  }
+
+  async createTaskTemplate(data: Partial<TaskTemplate>) {
+    return this.taskTplRepo.save(data);
+  }
+
+  async deleteTaskTemplate(id: number) {
+      return this.taskTplRepo.delete(id);
+  }
+  
+  // --- Programs Logic ---
+  async searchPrograms(query: { countryId?: string; universityId?: string; category?: string; search?: string }) {
+    const qb = this.programRepo.createQueryBuilder('program')
+      .leftJoinAndSelect('program.university', 'university')
+      .leftJoinAndSelect('university.country', 'country');
+
+    if (query.countryId) qb.andWhere('country.id = :cId', { cId: query.countryId });
+    if (query.universityId) qb.andWhere('university.id = :uId', { uId: query.universityId });
+    if (query.category) qb.andWhere('program.category = :cat', { cat: query.category });
+    if (query.search) qb.andWhere('program.title ILIKE :search', { search: `%${query.search}%` });
+
+    return qb.getMany();
+  }
+
+  async createProgram(data: Partial<Program>) {
+    return this.programRepo.save(data);
+  }
+
+  async updateProgram(id: number, data: Partial<Program>) {
+    await this.programRepo.update(id, data);
+    return this.programRepo.findOneBy({ id });
+  }
+
+  async deleteProgram(id: number) {
+    return this.programRepo.delete(id);
+  }
+  // ---------------------
+  
+  async resetPassword(userId: string, newPassword?: string) {
+      const user = await this.userRepo.findOneBy({ id: userId });
+      if (!user) throw new NotFoundException("User not found");
+      
+      const pass = newPassword || "12345678";
+      user.passwordHash = hashPassword(pass);
+      await this.userRepo.save(user);
+      return { message: "Password reset successfully", tempPassword: pass };
+  }
+}
+--- END FILE: apps/api/src/admin/admin.service.ts ---
+
 --- BEGIN FILE: apps/api/src/app.module.ts ---
 import { Module } from "@nestjs/common";
 import { HttpModule } from "@nestjs/axios";
@@ -61205,6 +61545,9 @@ import { CamundaModule } from "./camunda/camunda.module";
 import { AuthModule } from "./auth/auth.module";
 import { CountriesModule } from "./countries/countries.module";
 import { TasksModule } from "./tasks/tasks.module";
+import { AdminModule } from "./admin/admin.module";
+import { FilesModule } from "./files/files.module";
+import { StudentsModule } from "./students/students.module";
 
 // Entities
 import { Company } from "./entities/company.entity";
@@ -61212,6 +61555,10 @@ import { User } from "./entities/user.entity";
 import { Student } from "./entities/student.entity";
 import { Country } from "./entities/country.entity";
 import { Task } from "./entities/task.entity";
+import { University } from "./entities/university.entity";
+import { Program } from "./entities/program.entity";
+import { TaskTemplate } from "./entities/task-template.entity";
+import { Curator } from "./entities/curator.entity";
 
 @Module({
   imports: [
@@ -61219,7 +61566,7 @@ import { Task } from "./entities/task.entity";
     TypeOrmModule.forRoot({
       type: 'postgres',
       url: process.env.DATABASE_URL,
-      entities: [Company, User, Student, Country, Task],
+      entities: [Company, User, Student, Country, Task, University, Program, TaskTemplate, Curator],
       synchronize: true, // Внимание: только для разработки. В проде используйте миграции.
       autoLoadEntities: true,
     }),
@@ -61227,6 +61574,9 @@ import { Task } from "./entities/task.entity";
     AuthModule,
     CountriesModule,
     TasksModule,
+    AdminModule,
+    FilesModule,
+    StudentsModule,
   ],
 })
 export class AppModule {}
@@ -61421,6 +61771,8 @@ export class AuthService {
   ) {}
 
   async register(data: RegisterDto) {
+    console.log("Registering user:", data.email, "Role requested:", data.role); // LOG
+
     const company = await this.companyRepo.findOne({ where: {} }); 
     if (!company) {
         throw new Error("System not initialized: No company found. Run seeds.");
@@ -61757,7 +62109,8 @@ export class Company {
 --- END FILE: apps/api/src/entities/company.entity.ts ---
 
 --- BEGIN FILE: apps/api/src/entities/country.entity.ts ---
-import { Entity, PrimaryColumn, Column } from 'typeorm';
+import { Entity, PrimaryColumn, Column, OneToMany } from 'typeorm';
+import { University } from './university.entity';
 
 @Entity('countries')
 export class Country {
@@ -61769,8 +62122,44 @@ export class Country {
 
   @Column()
   flagIcon!: string;
+
+  @OneToMany(() => University, (uni) => uni.country)
+  universities!: University[];
 }
 --- END FILE: apps/api/src/entities/country.entity.ts ---
+
+--- BEGIN FILE: apps/api/src/entities/curator.entity.ts ---
+import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn } from 'typeorm';
+import { User } from './user.entity';
+
+@Entity('curators')
+export class Curator {
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
+
+  @Column()
+  companyId!: string;
+
+  @Column()
+  userId!: string;
+
+  @OneToOne(() => User, (user) => user.curator)
+  @JoinColumn({ name: 'userId' })
+  user!: User;
+
+  @Column({ nullable: true })
+  fullName?: string;
+
+  @Column({ nullable: true })
+  specialization?: string;
+
+  @Column('text', { nullable: true })
+  bio?: string;
+
+  @Column({ nullable: true })
+  avatarUrl?: string;
+}
+--- END FILE: apps/api/src/entities/curator.entity.ts ---
 
 --- BEGIN FILE: apps/api/src/entities/enums.ts ---
 export enum Role {
@@ -61786,6 +62175,40 @@ export enum TaskStatus {
   DONE = 'DONE',
 }
 --- END FILE: apps/api/src/entities/enums.ts ---
+
+--- BEGIN FILE: apps/api/src/entities/program.entity.ts ---
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { University } from './university.entity';
+
+@Entity('programs')
+export class Program {
+  @PrimaryGeneratedColumn()
+  id!: number;
+
+  @Column()
+  universityId!: string;
+
+  @ManyToOne(() => University, (uni) => uni.programs)
+  @JoinColumn({ name: 'universityId' })
+  university!: University;
+
+// --- НОВОЕ ПОЛЕ ---
+  @Column({ nullable: true })
+  category?: string; // 'IT', 'Engineering', 'Business', 'Arts', etc.
+
+  @Column()
+  title!: string;
+
+  @Column({ type: 'date', nullable: true })
+  deadline?: string;
+
+  @Column({ nullable: true })
+  link?: string;
+
+  @Column({ nullable: true })
+  imageUrl?: string;
+}
+--- END FILE: apps/api/src/entities/program.entity.ts ---
 
 --- BEGIN FILE: apps/api/src/entities/student.entity.ts ---
 import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn, OneToMany } from 'typeorm';
@@ -61827,6 +62250,37 @@ export class Student {
 }
 --- END FILE: apps/api/src/entities/student.entity.ts ---
 
+--- BEGIN FILE: apps/api/src/entities/task-template.entity.ts ---
+import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+
+@Entity('task_templates')
+export class TaskTemplate {
+  @PrimaryGeneratedColumn()
+  id!: number;
+
+  @Column({ nullable: true })
+  countryId?: string;
+
+  @Column({ nullable: true })
+  universityId?: string;
+
+  @Column()
+  stage!: string;
+
+  @Column()
+  title!: string;
+
+  @Column('text')
+  description!: string;
+
+  @Column()
+  xpReward!: number;
+
+  @Column({ default: 'text' })
+  submissionType!: string;
+}
+--- END FILE: apps/api/src/entities/task-template.entity.ts ---
+
 --- BEGIN FILE: apps/api/src/entities/task.entity.ts ---
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { Student } from './student.entity';
@@ -61867,10 +62321,39 @@ export class Task {
 }
 --- END FILE: apps/api/src/entities/task.entity.ts ---
 
+--- BEGIN FILE: apps/api/src/entities/university.entity.ts ---
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
+import { Country } from './country.entity';
+import { Program } from './program.entity';
+
+@Entity('universities')
+export class University {
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
+
+  @Column()
+  countryId!: string;
+
+  @ManyToOne(() => Country, (country) => country.universities)
+  @JoinColumn({ name: 'countryId' })
+  country!: Country;
+
+  @Column()
+  name!: string;
+
+  @Column({ nullable: true })
+  logoUrl?: string;
+
+  @OneToMany(() => Program, (program) => program.university)
+  programs!: Program[];
+}
+--- END FILE: apps/api/src/entities/university.entity.ts ---
+
 --- BEGIN FILE: apps/api/src/entities/user.entity.ts ---
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToOne, JoinColumn } from 'typeorm';
 import { Company } from './company.entity';
 import { Student } from './student.entity';
+import { Curator } from './curator.entity';
 import { Role } from './enums';
 
 @Entity('users')
@@ -61897,10 +62380,104 @@ export class User {
   @Column({ default: true })
   isActive!: boolean;
 
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  createdAt!: Date;
+
   @OneToOne(() => Student, (student) => student.user)
   student?: Student;
+
+  @OneToOne(() => Curator, (curator) => curator.user)
+  curator?: Curator;
 }
 --- END FILE: apps/api/src/entities/user.entity.ts ---
+
+--- BEGIN FILE: apps/api/src/files/files.controller.ts ---
+import { Controller, Post, UploadedFile, UseInterceptors, UseGuards } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { FilesService } from './files.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+
+@Controller('files')
+export class FilesController {
+  constructor(private readonly filesService: FilesService) {}
+
+  @Post('upload')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadFile(@UploadedFile() file: Express.Multer.File) {
+    const url = await this.filesService.uploadFile(file);
+    return { url };
+  }
+}
+--- END FILE: apps/api/src/files/files.controller.ts ---
+
+--- BEGIN FILE: apps/api/src/files/files.module.ts ---
+import { Module } from '@nestjs/common';
+import { FilesController } from './files.controller';
+import { FilesService } from './files.service';
+
+@Module({
+  controllers: [FilesController],
+  providers: [FilesService],
+})
+export class FilesModule {}
+--- END FILE: apps/api/src/files/files.module.ts ---
+
+--- BEGIN FILE: apps/api/src/files/files.service.ts ---
+import { Injectable, OnModuleInit } from '@nestjs/common';
+import * as Minio from 'minio';
+
+@Injectable()
+export class FilesService implements OnModuleInit {
+  private minioClient: Minio.Client;
+  private bucketName = process.env.MINIO_BUCKET || 'abbit-files';
+
+  constructor() {
+    this.minioClient = new Minio.Client({
+      endPoint: process.env.MINIO_ENDPOINT || 'localhost',
+      port: parseInt(process.env.MINIO_PORT || '9000'),
+      useSSL: false,
+      accessKey: process.env.MINIO_ACCESS_KEY || 'minioadmin',
+      secretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
+    });
+  }
+
+  async onModuleInit() {
+    const exists = await this.minioClient.bucketExists(this.bucketName);
+    if (!exists) {
+      await this.minioClient.makeBucket(this.bucketName, 'us-east-1');
+      // Делаем бакет публичным для чтения (упрощение для MVP)
+      const policy = {
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Effect: 'Allow',
+            Principal: { AWS: ['*'] },
+            Action: ['s3:GetObject'],
+            Resource: [`arn:aws:s3:::${this.bucketName}/*`],
+          },
+        ],
+      };
+      await this.minioClient.setBucketPolicy(this.bucketName, JSON.stringify(policy));
+    }
+  }
+
+  async uploadFile(file: Express.Multer.File) {
+    const fileName = `${Date.now()}-${file.originalname}`;
+    await this.minioClient.putObject(
+      this.bucketName,
+      fileName,
+      file.buffer,
+      file.size,
+      { 'Content-Type': file.mimetype }
+    );
+    
+    // Возвращаем URL. В проде здесь должен быть публичный домен, сейчас для локальной разработки:
+    const host = process.env.MINIO_EXTERNAL_HOST || 'localhost';
+    return `http://${host}:9000/${this.bucketName}/${fileName}`;
+  }
+}
+--- END FILE: apps/api/src/files/files.service.ts ---
 
 --- BEGIN FILE: apps/api/src/main.ts ---
 import "reflect-metadata";
@@ -61932,57 +62509,262 @@ import { Country } from './entities/country.entity';
 import { User } from './entities/user.entity';
 import { Student } from './entities/student.entity';
 import { Task } from './entities/task.entity';
+import { University } from './entities/university.entity';
+import { Program } from './entities/program.entity';
+import { TaskTemplate } from './entities/task-template.entity';
+import { Curator } from './entities/curator.entity';
 import "dotenv/config";
 
 const AppDataSource = new DataSource({
     type: 'postgres',
     url: process.env.DATABASE_URL,
-    // Важно добавить все сущности, которые связаны друг с другом,
-    // даже если мы создаем только Company. TypeORM проверяет связи при инициализации.
-    entities: [Company, Country, User, Student, Task],
-    synchronize: false, 
+    entities: [Company, Country, User, Student, Task, University, Program, TaskTemplate, Curator],
+    synchronize: true, // Внимание: в проде используйте false и миграции
 });
 
 async function seed() {
     await AppDataSource.initialize();
-    console.log("Seeding started...");
+    console.log("Database connected for seeding...");
 
+    // 1. Company
     const companyRepo = AppDataSource.getRepository(Company);
-    const countryRepo = AppDataSource.getRepository(Country);
-
-    // Используем валидный UUID вместо простого текста
-    const COMPANY_ID = '123e4567-e89b-12d3-a456-426614174000';
-
-    // 1. Default Company
-    const existingCompany = await companyRepo.findOneBy({ id: COMPANY_ID });
-    if (!existingCompany) {
-        await companyRepo.save({
-            id: COMPANY_ID,
-            name: 'Gerus Labs',
-            config: { theme: 'dark' }
-        });
-        console.log("Created Company");
+    let company = await companyRepo.findOne({ where: { name: "Abbit Agency" } });
+    if (!company) {
+        company = companyRepo.create({ name: "Abbit Agency", config: { theme: "default" } });
+        await companyRepo.save(company);
+        console.log("✅ Company created");
     }
 
     // 2. Countries
-    const countries = [
+    const countryRepo = AppDataSource.getRepository(Country);
+    const countriesData = [
         { id: 'at', name: 'Австрия', flagIcon: '🇦🇹' },
         { id: 'it', name: 'Италия', flagIcon: '🇮🇹' },
+        { id: 'de', name: 'Германия', flagIcon: '🇩🇪' },
+        { id: 'us', name: 'США', flagIcon: '🇺🇸' },
+        { id: 'uk', name: 'Великобритания', flagIcon: '🇬🇧' },
+        { id: 'fr', name: 'Франция', flagIcon: '🇫🇷' },
+        { id: 'nl', name: 'Нидерланды', flagIcon: '🇳🇱' },
     ];
 
-    for (const c of countries) {
-        const exists = await countryRepo.findOneBy({ id: c.id });
-        if (!exists) {
-            await countryRepo.save(c);
+    for (const c of countriesData) {
+        const existing = await countryRepo.findOneBy({ id: c.id });
+        if (!existing) await countryRepo.save(c);
+    }
+    console.log("✅ Countries seeded");
+
+    // 3. Universities & Programs with Categories
+    const uniRepo = AppDataSource.getRepository(University);
+    const progRepo = AppDataSource.getRepository(Program);
+
+    const universitiesData = [
+        {
+            countryId: 'at',
+            name: 'University of Vienna',
+            logoUrl: '🏛️',
+            programs: [
+                { category: 'Business', title: 'Business Administration (BSc)', deadline: '2026-05-01', link: 'https://studieren.univie.ac.at/en', imageUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800' },
+                { category: 'IT', title: 'Computer Science (MSc)', deadline: '2026-04-15', link: 'https://informatik.univie.ac.at/en/', imageUrl: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800' }
+            ]
+        },
+        {
+            countryId: 'at',
+            name: 'TU Wien',
+            logoUrl: '⚙️',
+            programs: [
+                { category: 'Arts/Design', title: 'Architecture (BSc)', deadline: '2026-03-01', link: 'https://www.tuwien.at/en/studies', imageUrl: 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=800' },
+                { category: 'IT', title: 'Data Science (MSc)', deadline: '2026-06-30', link: 'https://www.tuwien.at/en', imageUrl: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800' },
+                { category: 'Engineering', title: 'Mechanical Engineering (BSc)', deadline: '2026-07-15', link: 'https://www.tuwien.at', imageUrl: 'https://images.unsplash.com/photo-1537462713205-e512641bf201?w=800' }
+            ]
+        },
+        {
+            countryId: 'it',
+            name: 'University of Bologna',
+            logoUrl: '🎓',
+            programs: [
+                { category: 'Humanities', title: 'International Relations (MA)', deadline: '2026-05-20', link: 'https://www.unibo.it/en', imageUrl: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800' },
+                { category: 'Science', title: 'Genomics (BSc)', deadline: '2026-04-10', link: 'https://www.unibo.it/en', imageUrl: 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=800' },
+                { category: 'Law', title: 'Legal Studies (LLB)', deadline: '2026-05-05', link: 'https://www.unibo.it/en', imageUrl: 'https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=800' }
+            ]
+        },
+        {
+            countryId: 'it',
+            name: 'Politecnico di Milano',
+            logoUrl: '🏗️',
+            programs: [
+                { category: 'Engineering', title: 'Mechanical Engineering (BSc)', deadline: '2026-07-15', link: 'https://www.polimi.it/en', imageUrl: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800' },
+                { category: 'Arts/Design', title: 'Design & Engineering (MSc)', deadline: '2026-02-28', link: 'https://www.polimi.it/en', imageUrl: 'https://images.unsplash.com/photo-1581093588401-fbb07363f552?w=800' },
+                { category: 'Arts/Design', title: 'Fashion Design (BA)', deadline: '2026-04-10', link: 'https://www.polimi.it', imageUrl: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=800' }
+            ]
+        },
+        {
+            countryId: 'de',
+            name: 'TU Munich',
+            logoUrl: '🍺',
+            programs: [
+                { category: 'Engineering', title: 'Aerospace (BSc)', deadline: '2026-07-15', link: 'https://www.tum.de/en/', imageUrl: 'https://images.unsplash.com/photo-1517976487492-5750f3195933?w=800' },
+                { category: 'IT', title: 'Robotics (MSc)', deadline: '2026-05-31', link: 'https://www.tum.de/en/', imageUrl: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=800' },
+                { category: 'Business', title: 'Management & Technology (BSc)', deadline: '2026-07-15', link: 'https://www.tum.de/en/', imageUrl: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800' }
+            ]
+        },
+        {
+            countryId: 'us',
+            name: 'MIT',
+            logoUrl: '🚀',
+            programs: [
+                { category: 'IT', title: 'Computer Science (BSc)', deadline: '2026-01-01', link: 'https://www.mit.edu/', imageUrl: 'https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?w=800' },
+                { category: 'Arts/Design', title: 'Media Arts (MSc)', deadline: '2025-12-15', link: 'https://www.media.mit.edu/', imageUrl: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800' },
+                { category: 'Engineering', title: 'Nuclear Science (PhD)', deadline: '2025-12-15', link: 'https://www.mit.edu', imageUrl: 'https://images.unsplash.com/photo-1574352067721-72d5913ef8e1?w=800' }
+            ]
+        },
+        {
+            countryId: 'us',
+            name: 'Stanford University',
+            logoUrl: '🌲',
+            programs: [
+                { category: 'Business', title: 'MBA', deadline: '2025-09-10', link: 'https://www.stanford.edu/', imageUrl: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800' },
+                { category: 'IT', title: 'Symbolic Systems (BSc)', deadline: '2026-01-05', link: 'https://www.stanford.edu/', imageUrl: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=800' }
+            ]
+        },
+        {
+            countryId: 'uk',
+            name: 'University of Oxford',
+            logoUrl: '📚',
+            programs: [
+                { category: 'Law', title: 'Law (BA)', deadline: '2025-10-15', link: 'https://www.ox.ac.uk/', imageUrl: 'https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=800' },
+                { category: 'Business', title: 'Financial Economics (MSc)', deadline: '2026-01-08', link: 'https://www.ox.ac.uk/', imageUrl: 'https://images.unsplash.com/photo-1611974765270-ca1258634369?w=800' },
+                { category: 'Humanities', title: 'Philosophy, Politics and Economics (BA)', deadline: '2025-10-15', link: 'https://www.ox.ac.uk', imageUrl: 'https://images.unsplash.com/photo-1519791883288-dc8bd696e667?w=800' }
+            ]
+        },
+        {
+            countryId: 'fr',
+            name: 'Sorbonne University',
+            logoUrl: '⚜️',
+            programs: [
+                { category: 'Humanities', title: 'History of Art (Licence)', deadline: '2026-04-01', link: 'https://www.sorbonne-universite.fr/en', imageUrl: 'https://images.unsplash.com/photo-1565060169123-e99d9841f237?w=800' },
+                { category: 'Science', title: 'Physics (Master)', deadline: '2026-03-15', link: 'https://www.sorbonne-universite.fr', imageUrl: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=800' }
+            ]
+        },
+        {
+            countryId: 'nl',
+            name: 'TU Delft',
+            logoUrl: '🚲',
+            programs: [
+                { category: 'Arts/Design', title: 'Industrial Design Engineering (MSc)', deadline: '2026-04-01', link: 'https://www.tudelft.nl', imageUrl: 'https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?w=800' },
+                { category: 'Engineering', title: 'Aerospace Engineering (BSc)', deadline: '2026-01-15', link: 'https://www.tudelft.nl', imageUrl: 'https://images.unsplash.com/photo-1517976487492-5750f3195933?w=800' }
+            ]
+        }
+    ];
+
+    for (const uData of universitiesData) {
+        let uni = await uniRepo.findOne({ where: { name: uData.name } });
+        if (!uni) {
+            uni = uniRepo.create({
+                name: uData.name,
+                countryId: uData.countryId,
+                logoUrl: uData.logoUrl
+            });
+            await uniRepo.save(uni);
+            console.log(`Created university: ${uni.name}`);
+        }
+
+        for (const pData of uData.programs) {
+            const progExists = await progRepo.findOne({ where: { title: pData.title, universityId: uni.id } });
+            if (!progExists) {
+                const prog = progRepo.create({
+                    universityId: uni.id,
+                    title: pData.title,
+                    category: pData.category,
+                    deadline: pData.deadline,
+                    link: pData.link,
+                    imageUrl: pData.imageUrl
+                });
+                await progRepo.save(prog);
+                console.log(`  -> Added program: [${pData.category}] ${pData.title}`);
+            } else {
+                // Обновляем категорию для существующих записей
+                progExists.category = pData.category;
+                await progRepo.save(progExists);
+            }
         }
     }
-    console.log("Created Countries");
 
-    await AppDataSource.destroy();
+    console.log("✅ Seeding complete with Categories!");
+    process.exit(0);
 }
 
-seed().catch(console.error);
+seed().catch((err) => {
+    console.error("❌ Seeding error", err);
+    process.exit(1);
+});
 --- END FILE: apps/api/src/seed.ts ---
+
+--- BEGIN FILE: apps/api/src/students/students.controller.ts ---
+import { Body, Controller, Get, Param, Patch, UseGuards } from '@nestjs/common';
+import { StudentsService } from './students.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+
+@Controller('students')
+@UseGuards(JwtAuthGuard)
+export class StudentsController {
+  constructor(private readonly studentsService: StudentsService) {}
+
+  @Get(':id')
+  getOne(@Param('id') id: string) {
+    return this.studentsService.getStudent(id);
+  }
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() body: any) {
+    return this.studentsService.updateProfile(id, body);
+  }
+}
+--- END FILE: apps/api/src/students/students.controller.ts ---
+
+--- BEGIN FILE: apps/api/src/students/students.module.ts ---
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { StudentsController } from './students.controller';
+import { StudentsService } from './students.service';
+import { Student } from '../entities/student.entity';
+
+@Module({
+  imports: [TypeOrmModule.forFeature([Student])],
+  controllers: [StudentsController],
+  providers: [StudentsService],
+})
+export class StudentsModule {}
+--- END FILE: apps/api/src/students/students.module.ts ---
+
+--- BEGIN FILE: apps/api/src/students/students.service.ts ---
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Student } from '../entities/student.entity';
+
+@Injectable()
+export class StudentsService {
+  constructor(
+    @InjectRepository(Student) private studentRepo: Repository<Student>,
+  ) {}
+
+  async updateProfile(id: string, data: Partial<Student>) {
+    const student = await this.studentRepo.findOneBy({ id });
+    if (!student) throw new NotFoundException('Student not found');
+
+    // Разрешаем обновлять только безопасные поля
+    if (data.fullName) student.fullName = data.fullName;
+    if (data.countryId) student.countryId = data.countryId;
+    // TODO: Обработка смены программ (selectedProgramIds) потребовала бы обновления Tasks
+    
+    return this.studentRepo.save(student);
+  }
+  
+  async getStudent(id: string) {
+      return this.studentRepo.findOne({ where: { id }, relations: ['user']});
+  }
+}
+--- END FILE: apps/api/src/students/students.service.ts ---
 
 --- BEGIN FILE: apps/api/src/tasks/dto/approve-task.dto.ts ---
 export class RejectTaskDto {
@@ -62259,6 +63041,119 @@ yarn-error.log*
 next-env.d.ts
 --- END FILE: apps/web/.gitignore ---
 
+--- BEGIN FILE: apps/web/app/curator/admin/countries/ProgramEditModal.tsx ---
+"use client";
+import { useState, useEffect } from "react";
+
+type Props = {
+  program?: any;
+  universityId: string;
+  onSave: (data: any) => Promise<void>;
+  onClose: () => void;
+};
+
+const CATEGORIES = ["IT", "Business", "Engineering", "Arts/Design", "Law", "Medicine", "Science", "Humanities"];
+
+export default function ProgramEditModal({ program, universityId, onSave, onClose }: Props) {
+  const [formData, setFormData] = useState({
+    title: "",
+    category: "IT", // Default
+    deadline: "",
+    link: "",
+    imageUrl: "",
+    universityId: universityId
+  });
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (program) {
+      setFormData({
+        title: program.title,
+        category: program.category || "IT", // Load existing
+        deadline: program.deadline,
+        link: program.link || "",
+        imageUrl: program.imageUrl || "",
+        universityId: program.university?.id || universityId
+      });
+    }
+  }, [program]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await onSave({ ...formData, id: program?.id });
+      onClose();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const inputClass = "w-full mt-1 p-2 rounded bg-zinc-800 border border-zinc-700 text-sm";
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+      <div className="w-full max-w-md card p-6 bg-zinc-900" onClick={(e) => e.stopPropagation()}>
+        <h2 className="text-lg font-bold mb-4">{program ? "Редактировать программу" : "Новая программа"}</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="text-xs text-zinc-400">Название (Специальность)</label>
+            <input 
+              value={formData.title} 
+              onChange={e => setFormData({...formData, title: e.target.value})}
+              className={inputClass}
+              required
+              placeholder="Computer Science, Architecture..."
+            />
+          </div>
+          <div>
+            <label className="text-xs text-zinc-400">Категория</label>
+            <select
+                value={formData.category}
+                onChange={e => setFormData({...formData, category: e.target.value})}
+                className={inputClass}
+            >
+                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs text-zinc-400">Дедлайн</label>
+            <input 
+              type="date"
+              value={formData.deadline} 
+              onChange={e => setFormData({...formData, deadline: e.target.value})}
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className="text-xs text-zinc-400">Ссылка на описание</label>
+            <input 
+              value={formData.link} 
+              onChange={e => setFormData({...formData, link: e.target.value})}
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className="text-xs text-zinc-400">URL картинки</label>
+            <input 
+              value={formData.imageUrl} 
+              onChange={e => setFormData({...formData, imageUrl: e.target.value})}
+              className={inputClass}
+            />
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <button type="button" onClick={onClose} className="btn bg-zinc-800 text-zinc-300">Отмена</button>
+            <button type="submit" disabled={loading} className="btn btn-primary">{loading ? "..." : "Сохранить"}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+--- END FILE: apps/web/app/curator/admin/countries/ProgramEditModal.tsx ---
+
 --- BEGIN FILE: apps/web/app/curator/admin/countries/QuestEditModal.tsx ---
 "use client";
 import { useState, useEffect } from "react";
@@ -62278,7 +63173,7 @@ export default function QuestEditModal({ quest, onSave, onClose }: Props) {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData((prev: any) => ({ ...prev, [name]: name === 'xp' ? Number(value) : value }));
+    setFormData((prev: any) => ({ ...prev, [name]: name === 'xpReward' ? Number(value) : value }));
   };
   
   const handleSubmit = (e: React.FormEvent) => {
@@ -62306,7 +63201,7 @@ export default function QuestEditModal({ quest, onSave, onClose }: Props) {
             </div>
             <div>
               <label className="text-sm">Опыт (XP)</label>
-              <input type="number" name="xp" value={formData.xp} onChange={handleChange} className="w-full mt-1 input-style" />
+              <input type="number" name="xpReward" value={formData.xpReward} onChange={handleChange} className="w-full mt-1 input-style" />
             </div>
           </div>
           <div className="flex justify-end gap-3 mt-6">
@@ -62336,62 +63231,53 @@ export default function QuestEditModal({ quest, onSave, onClose }: Props) {
 --- BEGIN FILE: apps/web/app/curator/admin/countries/QuestEditor.tsx ---
 "use client";
 import { useState } from "react";
-import { useCountry } from "@/shared/CountryContext";
-import type { UniversityProfile } from "./page";
 import QuestEditModal from "./QuestEditModal";
 
 type Props = {
-  profile?: UniversityProfile;
-  onUpdateProfile: (updatedProfile: UniversityProfile) => void;
+  profile?: any;
+  onUpdateProfile: (p: any) => void;
+  apiSave?: (quest: any) => void;
+  apiDelete?: (id: number) => void;
 };
 
-export default function QuestEditor({ profile, onUpdateProfile }: Props) {
-  const { universities, quests: questTemplates } = useCountry();
+export default function QuestEditor({ profile, apiSave, apiDelete }: Props) {
   const [editingQuest, setEditingQuest] = useState<any | null>(null);
 
   if (!profile) {
-    return <div className="p-4 text-center text-zinc-500">Выберите университет</div>;
+    return <div className="p-4 text-center text-zinc-500">Выберите область</div>;
   }
 
-  const university = universities.find(u => u.id === profile.universityId);
-
   const handleRemoveQuest = (questId: number) => {
-    const updatedQuests = profile.assignedQuests.filter(q => q.id !== questId);
-    onUpdateProfile({ ...profile, assignedQuests: updatedQuests });
+    if (confirm("Удалить задачу навсегда?")) {
+        apiDelete?.(questId);
+    }
   };
   
   const handleSaveQuest = (updatedQuest: any) => {
-      let updatedQuests;
-      // Если ID существует, обновляем, иначе добавляем
-      if (profile.assignedQuests.some(q => q.id === updatedQuest.id)) {
-          updatedQuests = profile.assignedQuests.map(q => q.id === updatedQuest.id ? updatedQuest : q);
-      } else {
-          updatedQuests = [...profile.assignedQuests, updatedQuest];
-      }
-      onUpdateProfile({ ...profile, assignedQuests: updatedQuests });
+      apiSave?.(updatedQuest);
       setEditingQuest(null);
   };
   
   const handleCreateNew = () => {
     setEditingQuest({
-        id: -Date.now(), // Временный уникальный ID
+        id: -Date.now(),
         title: "Новая задача",
-        stage: "Кастомная",
-        description: "",
-        xp: 10,
+        stage: "Документы",
+        description: "Описание задачи...",
+        xpReward: 10,
     });
   };
 
   return (
     <div>
-      <h2 className="font-semibold px-2 mb-2">{university?.name}</h2>
+      <h2 className="font-semibold px-2 mb-2">Задачи ({profile.assignedQuests.length})</h2>
       <div className="p-2">
         <button onClick={handleCreateNew} className="btn btn-primary w-full text-sm">
           + Создать новую задачу
         </button>
       </div>
       <ul className="space-y-2 mt-2">
-        {profile.assignedQuests.map(quest => (
+        {profile.assignedQuests.map((quest: any) => (
           <li key={quest.id} className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700/50">
             <div className="flex justify-between items-center">
               <span className="text-sm">{quest.title}</span>
@@ -62415,124 +63301,159 @@ export default function QuestEditor({ profile, onUpdateProfile }: Props) {
 }
 --- END FILE: apps/web/app/curator/admin/countries/QuestEditor.tsx ---
 
---- BEGIN FILE: apps/web/app/curator/admin/countries/UniversityList.tsx ---
-"use client";
-import { useCountry } from "@/shared/CountryContext";
-import type { UniversityProfile } from "./page";
-
-type Props = {
-  countryId: string | null;
-  profiles: UniversityProfile[];
-  selectedUniversityId: string | null;
-  onSelectUniversity: (id: string) => void;
-};
-
-export default function UniversityList({ countryId, profiles, selectedUniversityId, onSelectUniversity }: Props) {
-  const { universities } = useCountry();
-
-  if (!countryId) {
-    return <div className="p-4 text-center text-zinc-500">Выберите страну</div>;
-  }
-
-  const filteredUniversities = universities.filter(uni => 
-    profiles.some(p => p.countryId === countryId && p.universityId === uni.id)
-  );
-
-  return (
-    <div>
-      <h2 className="font-semibold px-2 mb-2">Университеты</h2>
-      {filteredUniversities.length > 0 ? (
-        <ul className="space-y-1">
-          {filteredUniversities.map(uni => (
-            <li key={uni.id}>
-              <button
-                onClick={() => onSelectUniversity(uni.id)}
-                className={`w-full text-left px-3 py-2 rounded-lg transition ${selectedUniversityId === uni.id ? 'bg-blue-600 text-white' : 'hover:bg-zinc-700'}`}
-              >
-                {uni.logo_url} {uni.name}
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="p-4 text-center text-zinc-500 text-sm">Для этой страны не настроены университеты.</p>
-      )}
-    </div>
-  );
-}
---- END FILE: apps/web/app/curator/admin/countries/UniversityList.tsx ---
-
 --- BEGIN FILE: apps/web/app/curator/admin/countries/page.tsx ---
 "use client";
 import { useEffect, useState, useMemo } from "react";
-import baseProfiles from "@/mock/university_profiles.json";
 import { useCountry } from "@/shared/CountryContext";
-import UniversityList from "./UniversityList";
 import QuestEditor from "./QuestEditor";
+import ProgramEditModal from "./ProgramEditModal";
 
-export type UniversityProfile = {
-  universityId: string;
-  countryId: string;
-  assignedQuests: any[];
-};
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
 
 export default function ConfiguratorPage() {
-  const { countries } = useCountry();
-  const [profiles, setProfiles] = useState<UniversityProfile[]>(baseProfiles as UniversityProfile[]);
-  const [selectedCountryId, setSelectedCountryId] = useState<string | null>(countries[0]?.id || null);
+  // @ts-ignore - refreshData injected via any
+  const { countries, universities, refreshData, quests } = useCountry();
+  const [selectedCountryId, setSelectedCountryId] = useState<string | null>(null);
   const [selectedUniversityId, setSelectedUniversityId] = useState<string | null>(null);
+  
+  // Tab state for the 3rd column
+  const [configTab, setConfigTab] = useState<'tasks' | 'programs'>('tasks');
+  const [programs, setPrograms] = useState<any[]>([]); // Инициализируем массивом
+  const [editingProgram, setEditingProgram] = useState<any | null>(null);
+  const [isProgramModalOpen, setIsProgramModalOpen] = useState(false);
 
   useEffect(() => {
-    // В реальном приложении здесь будет загрузка данных с сервера
-    // Для мока мы можем загрузить из localStorage
-    const savedProfiles = localStorage.getItem("universityProfilesOverride");
-    if (savedProfiles) {
-      setProfiles(JSON.parse(savedProfiles));
-    }
-  }, []);
+      if (countries.length > 0 && !selectedCountryId) {
+          setSelectedCountryId(countries[0].id);
+      }
+  }, [countries]);
 
-  const handleSelectCountry = (countryId: string) => {
-    setSelectedCountryId(countryId);
-    setSelectedUniversityId(null); // Сбрасываем выбор университета при смене страны
-  };
+  const filteredUniversities = useMemo(() => {
+      return universities.filter((u: any) => u.countryId === selectedCountryId);
+  }, [universities, selectedCountryId]);
+  
+  // --- ИСПРАВЛЕНИЕ ЗДЕСЬ ---
+  // Fetch programs whenever university changes
+  useEffect(() => {
+      if (selectedUniversityId) {
+          const token = localStorage.getItem("accessToken");
+          fetch(`${API_URL}/admin/programs/search?universityId=${selectedUniversityId}`, {
+              headers: { Authorization: `Bearer ${token}` }
+          })
+          .then(async (res) => {
+              if (res.ok) {
+                  const data = await res.json();
+                  // Проверяем, что пришел именно массив
+                  if (Array.isArray(data)) {
+                      setPrograms(data);
+                  } else {
+                      console.error("API Error: Programs data is not an array", data);
+                      setPrograms([]);
+                  }
+              } else {
+                  console.error("API Error status:", res.status);
+                  setPrograms([]);
+              }
+          })
+          .catch(err => {
+              console.error("Fetch failed", err);
+              setPrograms([]);
+          });
+      } else {
+          setPrograms([]);
+      }
+  }, [selectedUniversityId]);
 
-  const handleUpdateProfile = (updatedProfile: UniversityProfile) => {
-    setProfiles(prev => 
-      prev.map(p => p.universityId === updatedProfile.universityId ? updatedProfile : p)
-    );
+  const currentProfile = useMemo(() => {
+      const assignedQuests = quests.filter((q: any) => {
+          if (selectedUniversityId) return q.universityId === selectedUniversityId;
+          return q.countryId === selectedCountryId;
+      });
+      
+      return {
+          universityId: selectedUniversityId || "country-level",
+          countryId: selectedCountryId || "",
+          assignedQuests
+      };
+  }, [selectedUniversityId, selectedCountryId, quests]);
+
+  // API Actions
+  const saveTaskTemplate = async (task: any) => {
+      const token = localStorage.getItem("accessToken");
+      const payload = {
+          ...task,
+          universityId: selectedUniversityId, 
+          countryId: !selectedUniversityId ? selectedCountryId : undefined 
+      };
+      if (task.id < 0) delete payload.id; // New task
+
+      const res = await fetch(`${API_URL}/admin/task-templates`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify(payload)
+      });
+      
+      if (res.ok) await refreshData();
   };
   
-  const saveChanges = () => {
-    localStorage.setItem("universityProfilesOverride", JSON.stringify(profiles));
-    alert("Конфигурации университетов сохранены!");
+  const deleteTaskTemplate = async (id: number) => {
+       const token = localStorage.getItem("accessToken");
+       await fetch(`${API_URL}/admin/task-templates/${id}`, {
+           method: "DELETE",
+           headers: { Authorization: `Bearer ${token}` }
+       });
+       await refreshData();
+  }
+  
+  // Program Actions
+  const handleSaveProgram = async (data: any) => {
+      const token = localStorage.getItem("accessToken");
+      const method = data.id ? "PATCH" : "POST";
+      const url = data.id ? `${API_URL}/admin/programs/${data.id}` : `${API_URL}/admin/programs`;
+      
+      const res = await fetch(url, {
+          method,
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify(data)
+      });
+      
+      if (res.ok) {
+          // Refresh programs list safely
+           fetch(`${API_URL}/admin/programs/search?universityId=${selectedUniversityId}`, {
+              headers: { Authorization: `Bearer ${token}` }
+          })
+          .then(r => r.json())
+          .then(data => {
+             if(Array.isArray(data)) setPrograms(data);
+          });
+      }
   };
 
-  const uniqueCountries = useMemo(() => {
-      const countryIds = new Set(profiles.map(p => p.countryId));
-      return countries.filter(c => countryIds.has(c.id));
-  }, [profiles, countries]);
+  const handleDeleteProgram = async (id: number) => {
+       if(!confirm("Удалить программу?")) return;
+       const token = localStorage.getItem("accessToken");
+       await fetch(`${API_URL}/admin/programs/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+       // Refresh locally
+       setPrograms(prev => Array.isArray(prev) ? prev.filter(p => p.id !== id) : []);
+  }
 
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
         <div>
-          <h1 className="text-2xl font-semibold">Конфигуратор Программ</h1>
-          <p className="text-zinc-400 text-sm">Управляйте задачами для каждого университета.</p>
-        </div>
-        <div className="flex gap-2">
-          <button className="btn bg-white text-black">Импорт данных университетов</button>
-          <button className="btn btn-primary" onClick={saveChanges}>Сохранить все изменения</button>
+          <h1 className="text-2xl font-semibold">Страны и Программы</h1>
+          <p className="text-zinc-400 text-sm">Управление данными в БД.</p>
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[calc(100vh-12rem)]">
-        {/* Колонка 1: Страны */}
+        {/* Countries */}
         <div className="card p-3 overflow-y-auto">
           <h2 className="font-semibold px-2 mb-2">Страны</h2>
           <ul className="space-y-1">
-            {uniqueCountries.map(c => (
+            {countries.map((c: any) => (
               <li key={c.id}>
                 <button
-                  onClick={() => handleSelectCountry(c.id)}
+                  onClick={() => { setSelectedCountryId(c.id); setSelectedUniversityId(null); setConfigTab('tasks'); }}
                   className={`w-full text-left px-3 py-2 rounded-lg transition ${selectedCountryId === c.id ? 'bg-blue-600 text-white' : 'hover:bg-zinc-700'}`}
                 >
                   {c.flag_icon} {c.name}
@@ -62542,28 +63463,660 @@ export default function ConfiguratorPage() {
           </ul>
         </div>
 
-        {/* Колонка 2: Университеты */}
+        {/* Universities */}
         <div className="card p-3 overflow-y-auto">
-          <UniversityList
-            countryId={selectedCountryId}
-            profiles={profiles}
-            selectedUniversityId={selectedUniversityId}
-            onSelectUniversity={setSelectedUniversityId}
-          />
+          <h2 className="font-semibold px-2 mb-2">Университеты</h2>
+          {filteredUniversities.length > 0 ? (
+              <ul className="space-y-1">
+                  {filteredUniversities.map((uni: any) => (
+                      <li key={uni.id}>
+                          <button
+                              onClick={() => { setSelectedUniversityId(uni.id); setConfigTab('programs'); }}
+                              className={`w-full text-left px-3 py-2 rounded-lg transition ${selectedUniversityId === uni.id ? 'bg-blue-600 text-white' : 'hover:bg-zinc-700'}`}
+                          >
+                              {uni.logo_url} {uni.name}
+                          </button>
+                      </li>
+                  ))}
+              </ul>
+          ) : <p className="text-zinc-500 text-sm px-2">Нет университетов</p>}
         </div>
 
-        {/* Колонка 3: Редактор Задач */}
+        {/* Config Column (Tasks or Programs) */}
         <div className="card p-3 overflow-y-auto">
-          <QuestEditor
-            profile={profiles.find(p => p.universityId === selectedUniversityId)}
-            onUpdateProfile={handleUpdateProfile}
-          />
+          {/* Tabs */}
+          <div className="flex border-b border-zinc-200 dark:border-zinc-700 mb-3">
+             <button 
+                onClick={() => setConfigTab('tasks')}
+                className={`flex-1 py-2 text-sm font-medium ${configTab === 'tasks' ? 'border-b-2 border-blue-500 text-blue-500' : 'text-zinc-500'}`}
+             >
+                 Задачи
+             </button>
+             <button 
+                onClick={() => setConfigTab('programs')}
+                disabled={!selectedUniversityId}
+                className={`flex-1 py-2 text-sm font-medium ${configTab === 'programs' ? 'border-b-2 border-blue-500 text-blue-500' : 'text-zinc-500 disabled:opacity-50'}`}
+             >
+                 Программы
+             </button>
+          </div>
+
+          {configTab === 'tasks' ? (
+            <QuestEditor
+                profile={currentProfile}
+                onUpdateProfile={() => {}} 
+                apiSave={saveTaskTemplate}
+                apiDelete={deleteTaskTemplate}
+            />
+          ) : (
+            <div>
+                <div className="p-2">
+                    <button onClick={() => { setEditingProgram(null); setIsProgramModalOpen(true); }} className="btn btn-primary w-full text-sm">
+                    + Добавить программу
+                    </button>
+                </div>
+                <ul className="space-y-2 mt-2">
+                    {/* --- ИСПРАВЛЕНИЕ ЗДЕСЬ: Добавлена проверка на массив --- */}
+                    {Array.isArray(programs) && programs.map((prog: any) => (
+                        <li key={prog.id} className="p-3 rounded-lg bg-zinc-800 border border-zinc-700">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <div className="font-semibold text-sm">{prog.title}</div>
+                                    <div className="text-xs text-zinc-500">Дедлайн: {prog.deadline}</div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button onClick={() => { setEditingProgram(prog); setIsProgramModalOpen(true); }} className="text-xs text-blue-400">Ред.</button>
+                                    <button onClick={() => handleDeleteProgram(prog.id)} className="text-xs text-red-400">X</button>
+                                </div>
+                            </div>
+                        </li>
+                    ))}
+                    {(!Array.isArray(programs) || programs.length === 0) && <p className="text-center text-xs text-zinc-500 mt-4">Нет программ</p>}
+                </ul>
+            </div>
+          )}
         </div>
       </div>
+      
+      {isProgramModalOpen && selectedUniversityId && (
+        <ProgramEditModal
+            program={editingProgram}
+            universityId={selectedUniversityId}
+            onSave={handleSaveProgram}
+            onClose={() => setIsProgramModalOpen(false)}
+        />
+      )}
     </div>
   );
 }
 --- END FILE: apps/web/app/curator/admin/countries/page.tsx ---
+
+--- BEGIN FILE: apps/web/app/curator/admin/moderators/ModeratorModal.tsx ---
+"use client";
+import { useState, useEffect, useRef } from "react";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
+
+type Props = {
+  moderator?: any | null; // Если null - режим создания
+  onClose: () => void;
+  onSave: (data: any) => Promise<any>;
+};
+
+export default function ModeratorModal({ moderator, onClose, onSave }: Props) {
+  const [formData, setFormData] = useState({
+      email: "",
+      fullName: "",
+      specialization: "",
+      bio: "",
+      avatarUrl: "",
+      isActive: true,
+      password: "" 
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [createdPassword, setCreatedPassword] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (moderator) {
+      setFormData({
+          email: moderator.email,
+          fullName: moderator.curator?.fullName || "",
+          specialization: moderator.curator?.specialization || "",
+          bio: moderator.curator?.bio || "",
+          avatarUrl: moderator.curator?.avatarUrl || "",
+          isActive: moderator.isActive,
+          password: ""
+      });
+    }
+  }, [moderator]);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files?.[0]) return;
+    const file = e.target.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+        const token = localStorage.getItem("accessToken");
+        const res = await fetch(`${API_URL}/files/upload`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: formData
+        });
+        if(res.ok) {
+            const data = await res.json();
+            setFormData(prev => ({ ...prev, avatarUrl: data.url }));
+        }
+    } catch (err) {
+        alert("Ошибка загрузки");
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      const payload: any = { ...formData, id: moderator?.id };
+      if (!payload.password) delete payload.password;
+
+      const result = await onSave(payload);
+      
+      if (!moderator && result?.generatedPassword) {
+        setCreatedPassword(result.generatedPassword);
+      } else {
+        onClose();
+      }
+    } catch (err) {
+      alert("Ошибка сохранения");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (createdPassword) {
+    return (
+      <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+        <div className="w-full max-w-md card p-6 bg-zinc-900 text-center">
+          <div className="text-4xl mb-4">✅</div>
+          <h3 className="text-xl font-bold mb-2">Куратор создан</h3>
+          <p className="text-zinc-400 mb-4">Скопируйте пароль и передайте сотруднику:</p>
+          
+          <div className="bg-zinc-800 p-4 rounded-xl border border-zinc-700 font-mono text-xl select-all mb-6 text-green-400">
+            {createdPassword}
+          </div>
+
+          <button onClick={onClose} className="btn btn-primary w-full">
+            Закрыть
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 overflow-y-auto">
+      <div className="w-full max-w-lg card p-6 bg-zinc-900 my-8">
+        <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-bold">
+                {moderator ? "Редактировать профиль" : "Новый куратор"}
+            </h2>
+            <button onClick={onClose} className="text-2xl leading-none">&times;</button>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="flex items-center gap-4">
+              <div 
+                className="w-20 h-20 rounded-full bg-zinc-800 flex items-center justify-center overflow-hidden border border-zinc-700 cursor-pointer hover:border-blue-500 transition relative group"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                  {formData.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={formData.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                      <span className="text-2xl text-zinc-500">📷</span>
+                  )}
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                      <span className="text-xs text-white">Изменить</span>
+                  </div>
+              </div>
+              <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept="image/*" />
+              <div className="text-sm text-zinc-500">
+                  Нажмите на фото, чтобы загрузить аватар.
+              </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs text-zinc-400">ФИО</label>
+                <input
+                  value={formData.fullName}
+                  onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+                  className="w-full mt-1 p-2 rounded-xl bg-zinc-800 border border-zinc-700 text-sm"
+                  placeholder="Иван Иванов"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-zinc-400">Специализация</label>
+                <input
+                  value={formData.specialization}
+                  onChange={(e) => setFormData({...formData, specialization: e.target.value})}
+                  className="w-full mt-1 p-2 rounded-xl bg-zinc-800 border border-zinc-700 text-sm"
+                  placeholder="Визы, США"
+                />
+              </div>
+          </div>
+
+          <div>
+            <label className="text-xs text-zinc-400">Email (Логин)</label>
+            <input
+              type="email"
+              required
+              value={formData.email}
+              onChange={(e) => setFormData({...formData, email: e.target.value})}
+              className="w-full mt-1 p-2 rounded-xl bg-zinc-800 border border-zinc-700 text-sm"
+              placeholder="curator@abbit.com"
+            />
+          </div>
+
+           <div>
+            <label className="text-xs text-zinc-400">Пароль {moderator && "(оставьте пустым, чтобы не менять)"}</label>
+            <input
+              type="text"
+              value={formData.password}
+              onChange={(e) => setFormData({...formData, password: e.target.value})}
+              className="w-full mt-1 p-2 rounded-xl bg-zinc-800 border border-zinc-700 text-sm font-mono"
+              placeholder={moderator ? "Новый пароль" : "Оставьте пустым для автогенерации"}
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-zinc-400">О себе</label>
+            <textarea
+              value={formData.bio}
+              onChange={(e) => setFormData({...formData, bio: e.target.value})}
+              className="w-full mt-1 p-2 rounded-xl bg-zinc-800 border border-zinc-700 text-sm"
+              rows={3}
+            />
+          </div>
+
+          {moderator && (
+            <div className="flex items-center gap-3 p-3 bg-zinc-800/50 rounded-xl">
+              <input
+                type="checkbox"
+                id="active"
+                checked={formData.isActive}
+                onChange={(e) => setFormData({...formData, isActive: e.target.checked})}
+                className="w-5 h-5 rounded"
+              />
+              <label htmlFor="active" className="text-sm cursor-pointer select-none">
+                Активный аккаунт (доступ разрешен)
+              </label>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 mt-6">
+            <button type="button" onClick={onClose} className="btn bg-zinc-800 text-zinc-300">
+              Отмена
+            </button>
+            <button type="submit" disabled={isLoading} className="btn btn-primary">
+              {isLoading ? "Сохранение..." : moderator ? "Сохранить" : "Создать"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+--- END FILE: apps/web/app/curator/admin/moderators/ModeratorModal.tsx ---
+
+--- BEGIN FILE: apps/web/app/curator/admin/moderators/page.tsx ---
+"use client";
+import { useEffect, useState, useMemo } from "react";
+import { useCountry } from "@/shared/CountryContext";
+import ModeratorModal from "./ModeratorModal";
+import Calendar from "@/shared/Calendar";
+import type { CalendarEvent } from "@/shared/Calendar";
+import allQuestsTemplate from "@/mock/quest_templates.json"; // Мок для генерации событий
+
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
+
+type Moderator = {
+  id: string;
+  email: string;
+  isActive: boolean;
+  createdAt: string;
+  curator?: { // Data from relation
+      fullName: string;
+      specialization: string;
+      bio: string;
+      avatarUrl: string;
+  };
+};
+
+type StudentShort = {
+  id: string;
+  fullName: string;
+  countryId?: string;
+  xpTotal: number;
+};
+
+export default function ModeratorsPage() {
+  const { countries } = useCountry();
+  const [moderators, setModerators] = useState<Moderator[]>([]);
+  const [students, setStudents] = useState<StudentShort[]>([]);
+  const [selectedModeratorId, setSelectedModeratorId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  // --- НОВОЕ: Состояние табов ---
+  const [activeTab, setActiveTab] = useState<'info' | 'calendar' | 'tasks'>('info');
+
+  const fetchModerators = async () => {
+    const token = localStorage.getItem("accessToken");
+    try {
+      const res = await fetch(`${API_URL}/admin/moderators`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        // Removed mock enrichment, data comes from backend
+        setModerators(data.curators);
+        setStudents(data.students);
+        if (!selectedModeratorId && data.curators.length > 0) setSelectedModeratorId(data.curators[0].id);
+      }
+    } catch (e) { console.error(e); } finally { setLoading(false); }
+  };
+
+  useEffect(() => {
+    fetchModerators();
+  }, []);
+
+  const activeMod = moderators.find(m => m.id === selectedModeratorId);
+  // Временная фильтрация для демо (четные к четным), 
+  // в реале здесь должна быть проверка student.curatorId === activeMod.id
+  const linkedStudents = students.filter((s, idx) => {
+     if (!activeMod) return false;
+     const modIndex = moderators.findIndex(m => m.id === activeMod.id);
+     return idx % moderators.length === modIndex;
+  });
+
+  // --- НОВОЕ: Генерация статистики и данных для табов ---
+  const moderatorStats = useMemo(() => {
+      if (!activeMod) return { totalXP: 0, studentsCount: 0, pendingReviews: 0 };
+      const totalXP = linkedStudents.reduce((acc, s) => acc + s.xpTotal, 0);
+      // Имитация: у каждого 3-го студента есть задача на проверку
+      const pendingReviews = Math.floor(linkedStudents.length / 3); 
+      return { totalXP, studentsCount: linkedStudents.length, pendingReviews };
+  }, [activeMod, linkedStudents]);
+
+  const moderatorEvents = useMemo(() => {
+      if (!activeMod) return [];
+      const events: CalendarEvent[] = [];
+      // Генерируем фейковые дедлайны для студентов этого куратора
+      linkedStudents.forEach((student, i) => {
+          // Берем пару случайных квестов
+          const q1 = allQuestsTemplate[i % allQuestsTemplate.length];
+          if (q1 && q1.deadline) {
+              events.push({
+                  date: q1.deadline,
+                  title: `${q1.title} (${student.fullName})`,
+                  type: 'quest'
+              });
+          }
+      });
+      return events;
+  }, [activeMod, linkedStudents, allQuestsTemplate]);
+
+  const moderatorReviewTasks = useMemo(() => {
+      if (!activeMod) return [];
+      // Генерируем фейковый список задач на проверку
+      const tasks = [];
+      for(let i = 0; i < moderatorStats.pendingReviews; i++) {
+          const student = linkedStudents[i];
+          tasks.push({
+              id: i + 1000,
+              title: "Загрузка паспорта",
+              studentName: student.fullName,
+              date: new Date().toISOString().split('T')[0]
+          });
+      }
+      return tasks;
+  }, [activeMod, linkedStudents, moderatorStats]);
+
+  const handleSaveModerator = async (data: any) => {
+      const token = localStorage.getItem("accessToken");
+      let res;
+      
+      // Pass full data object (includes profile fields and password)
+      if (data.id) {
+          res = await fetch(`${API_URL}/admin/moderators/${data.id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+              body: JSON.stringify(data)
+          });
+      } else {
+          res = await fetch(`${API_URL}/admin/moderators`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+              body: JSON.stringify(data)
+          });
+      }
+      if (res.ok) {
+          await fetchModerators();
+          return await res.json(); // Возвращаем данные (там пароль при создании)
+      } else {
+          throw new Error("Failed");
+      }
+  };
+
+  if (loading) return <div className="p-8 text-zinc-500">Загрузка данных...</div>;
+
+  return (
+    <div className="h-[calc(100vh-6rem)] flex flex-col">
+      <div className="mb-4">
+        <h1 className="text-2xl font-semibold">Управление Модераторами</h1>
+        <p className="text-zinc-400 text-sm">Профили кураторов и распределение студентов.</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-6 h-full overflow-hidden">
+        {/* Список модераторов */}
+        <div className="card overflow-y-auto p-2">
+          <div className="p-2 flex justify-between items-center mb-2">
+              <span className="text-xs font-bold text-zinc-500 uppercase">Список ({moderators.length})</span>
+              <button 
+                onClick={() => { setModalMode('create'); setIsModalOpen(true); }}
+                className="text-xs bg-zinc-200 dark:bg-zinc-800 px-2 py-1 rounded hover:bg-zinc-300 dark:hover:bg-zinc-700 transition"
+              >
+                + Добавить
+              </button>
+          </div>
+          <ul className="space-y-1">
+            {moderators.map((mod, index) => (
+              <li key={mod.id}>
+                <button
+                  onClick={() => setSelectedModeratorId(mod.id)}
+                  className={`w-full text-left px-3 py-3 rounded-xl transition flex items-center gap-3 ${
+                    selectedModeratorId === mod.id 
+                      ? "bg-black text-white dark:bg-zinc-800" 
+                      : "hover:bg-zinc-100 dark:hover:bg-zinc-800/50"
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xs font-bold text-zinc-600 dark:text-zinc-300">
+                    {mod.curator?.fullName?.[0]?.toUpperCase() || mod.email[0]?.toUpperCase()}
+                  </div>
+                  <div className="overflow-hidden">
+                    <div className="font-medium text-sm truncate">{mod.curator?.fullName || mod.email}</div>
+                    <div className="text-xs text-zinc-500 truncate">{mod.curator?.specialization || "Куратор"}</div>
+                    {/* Индикатор задач (фейк) */}
+                    {index % 2 === 0 && (
+                        <div className="flex items-center gap-1 mt-1">
+                            <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
+                            <span className="text-[10px] text-zinc-400">Есть задачи</span>
+                        </div>
+                    )}
+                  </div>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Профиль и студенты */}
+        {activeMod ? (
+          <div className="flex flex-col gap-4 overflow-y-auto pr-1">
+            {/* Резюме */}
+            <div className="card p-6">
+              <div className="flex justify-between items-start mb-6">
+                <div className="flex gap-4 items-center">
+                  <div className="w-16 h-16 rounded-full overflow-hidden">
+                    {activeMod.curator?.avatarUrl ? (
+                      <img 
+                        src={activeMod.curator.avatarUrl} 
+                        alt="Avatar" 
+                        className="w-full h-full object-cover" 
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-2xl text-white font-bold">
+                        {activeMod.curator?.fullName?.[0]?.toUpperCase() || activeMod.email[0]?.toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold">{activeMod.curator?.fullName || "Без имени"}</h2>
+                    <p className="text-zinc-500 text-sm">{activeMod.email}</p>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium mt-1 ${activeMod.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                      {activeMod.isActive ? 'Активен' : 'Отключен'}
+                    </span>
+                  </div>
+                </div>
+                <button 
+                    onClick={() => { setModalMode('edit'); setIsModalOpen(true); }}
+                    className="btn border border-zinc-300 dark:border-zinc-700 text-xs"
+                >
+                    Редактировать
+                </button>
+              </div>
+              
+              {/* Табы */}
+              <div className="flex border-b border-zinc-200 dark:border-zinc-700 mb-4">
+                  <button 
+                    onClick={() => setActiveTab('info')}
+                    className={`px-4 py-2 text-sm font-medium border-b-2 transition ${activeTab === 'info' ? 'border-black dark:border-white text-black dark:text-white' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
+                  >
+                    Инфо / Статистика
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('calendar')}
+                    className={`px-4 py-2 text-sm font-medium border-b-2 transition ${activeTab === 'calendar' ? 'border-black dark:border-white text-black dark:text-white' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
+                  >
+                    Календарь
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('tasks')}
+                    className={`px-4 py-2 text-sm font-medium border-b-2 transition ${activeTab === 'tasks' ? 'border-black dark:border-white text-black dark:text-white' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
+                  >
+                    Задачи ({moderatorStats.pendingReviews})
+                  </button>
+              </div>
+
+              {/* Контент табов */}
+              <div className="min-h-[300px]">
+                {activeTab === 'info' && (
+                    <div className="space-y-6">
+                         <div className="grid grid-cols-3 gap-4">
+                            <div className="bg-zinc-50 dark:bg-zinc-800 p-3 rounded-xl text-center">
+                                <div className="text-2xl font-bold">{moderatorStats.studentsCount}</div>
+                                <div className="text-xs text-zinc-500">Студентов</div>
+                            </div>
+                            <div className="bg-zinc-50 dark:bg-zinc-800 p-3 rounded-xl text-center">
+                                <div className="text-2xl font-bold text-yellow-600">{moderatorStats.totalXP}</div>
+                                <div className="text-xs text-zinc-500">Общий XP</div>
+                            </div>
+                             <div className="bg-zinc-50 dark:bg-zinc-800 p-3 rounded-xl text-center">
+                                <div className="text-2xl font-bold text-blue-600">{moderatorStats.pendingReviews}</div>
+                                <div className="text-xs text-zinc-500">На проверке</div>
+                            </div>
+                         </div>
+
+                         <div>
+                            <div className="flex justify-between items-center mb-3">
+                                <h3 className="font-semibold text-sm">Список студентов</h3>
+                                <button className="text-xs text-blue-500 hover:underline">+ Привязать</button>
+                            </div>
+                            <table className="w-full text-sm text-left">
+                                <thead className="text-xs text-zinc-500 uppercase bg-zinc-50 dark:bg-zinc-800/50">
+                                    <tr>
+                                    <th className="px-4 py-2 rounded-l-lg">Имя</th>
+                                    <th className="px-4 py-2 text-right rounded-r-lg">Страна</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {linkedStudents.map(s => {
+                                         const country = countries.find((c: any) => c.id === s.countryId);
+                                         return (
+                                            <tr key={s.id} className="border-b border-zinc-100 dark:border-zinc-800">
+                                                <td className="px-4 py-2 font-medium">{s.fullName}</td>
+                                                <td className="px-4 py-2 text-right">{country?.flag_icon}</td>
+                                            </tr>
+                                         )
+                                    })}
+                                </tbody>
+                            </table>
+                         </div>
+                    </div>
+                )}
+
+                {activeTab === 'calendar' && (
+                    <div>
+                        <p className="text-xs text-zinc-500 mb-2">Дедлайны студентов этого куратора:</p>
+                        <Calendar events={moderatorEvents} />
+                    </div>
+                )}
+
+                {activeTab === 'tasks' && (
+                    <div>
+                        <h3 className="font-semibold text-sm mb-3">Очередь на проверку</h3>
+                        {moderatorReviewTasks.length > 0 ? (
+                            <ul className="space-y-2">
+                                {moderatorReviewTasks.map(task => (
+                                    <li key={task.id} className="p-3 bg-zinc-50 dark:bg-zinc-800 rounded-lg flex justify-between items-center">
+                                        <div>
+                                            <div className="font-medium text-sm">{task.title}</div>
+                                            <div className="text-xs text-zinc-500">Студент: {task.studentName}</div>
+                                        </div>
+                                        <button className="btn bg-white dark:bg-black border border-zinc-200 dark:border-zinc-700 text-xs py-1 px-3">
+                                            Проверить
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <p className="text-center text-zinc-500 py-8">Очередь пуста 🎉</p>
+                        )}
+                    </div>
+                )}
+              </div>
+            </div>
+
+          </div>
+        ) : (
+          <div className="flex items-center justify-center text-zinc-400">Выберите модератора</div>
+        )}
+      </div>
+
+      {isModalOpen && (
+        <ModeratorModal 
+            moderator={modalMode === 'edit' ? activeMod : null}
+            onClose={() => setIsModalOpen(false)}
+            onSave={handleSaveModerator}
+        />
+      )}
+    </div>
+  );
+}
+--- END FILE: apps/web/app/curator/admin/moderators/page.tsx ---
 
 --- BEGIN FILE: apps/web/app/curator/calendar/page.tsx ---
 "use client";
@@ -62747,6 +64300,152 @@ export default function CuratorLayout({ children }: { children: React.ReactNode 
 }
 --- END FILE: apps/web/app/curator/layout.tsx ---
 
+--- BEGIN FILE: apps/web/app/curator/programs-search/page.tsx ---
+"use client";
+import { useState, useEffect } from "react";
+import { useCountry } from "@/shared/CountryContext";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
+
+const CATEGORIES = ["IT", "Business", "Engineering", "Arts/Design", "Law", "Medicine", "Science", "Humanities"];
+
+export default function ProgramsSearchPage() {
+  const { countries, universities } = useCountry();
+  
+  const [filterCountry, setFilterCountry] = useState("");
+  const [filterUniversity, setFilterUniversity] = useState("");
+  const [filterCategory, setFilterCategory] = useState(""); // <--- Новый фильтр
+  const [searchQuery, setSearchQuery] = useState("");
+  const [results, setResults] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchPrograms = async () => {
+        setLoading(true);
+        const params = new URLSearchParams();
+        if (filterCountry) params.append("countryId", filterCountry);
+        if (filterUniversity) params.append("universityId", filterUniversity);
+        if (filterCategory) params.append("category", filterCategory); // <--- Отправка на бэк
+        if (searchQuery) params.append("search", searchQuery);
+
+        const token = localStorage.getItem("accessToken");
+        try {
+            const res = await fetch(`${API_URL}/admin/programs/search?${params.toString()}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.ok) {
+                setResults(await res.json());
+            }
+        } catch(e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    const timer = setTimeout(fetchPrograms, 300);
+    return () => clearTimeout(timer);
+  }, [filterCountry, filterUniversity, filterCategory, searchQuery]);
+
+  return (
+    <div>
+      <h1 className="text-2xl font-semibold mb-4">Поиск образовательных программ</h1>
+      
+      {/* Filters */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 bg-zinc-50 dark:bg-zinc-800 p-4 rounded-xl border border-zinc-200 dark:border-zinc-700">
+        <div>
+            <label className="text-xs text-zinc-500 block mb-1">Страна</label>
+            <select 
+                className="w-full p-2 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-600 text-sm"
+                value={filterCountry}
+                onChange={(e) => { setFilterCountry(e.target.value); setFilterUniversity(""); }}
+            >
+                <option value="">Все страны</option>
+                {countries.map(c => <option key={c.id} value={c.id}>{c.flag_icon} {c.name}</option>)}
+            </select>
+        </div>
+        <div>
+            <label className="text-xs text-zinc-500 block mb-1">Университет</label>
+            <select 
+                className="w-full p-2 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-600 text-sm"
+                value={filterUniversity}
+                onChange={(e) => setFilterUniversity(e.target.value)}
+                disabled={!filterCountry}
+            >
+                <option value="">Все университеты</option>
+                {universities
+                    .filter(u => !filterCountry || u.countryId === filterCountry)
+                    .map(u => <option key={u.id} value={u.id}>{u.name}</option>)
+                }
+            </select>
+        </div>
+        <div>
+            <label className="text-xs text-zinc-500 block mb-1">Категория</label>
+            <select 
+                className="w-full p-2 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-600 text-sm"
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+            >
+                <option value="">Все категории</option>
+                {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+            </select>
+        </div>
+        <div>
+             <label className="text-xs text-zinc-500 block mb-1">Поиск</label>
+             <input 
+                type="text"
+                placeholder="Название..."
+                className="w-full p-2 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-600 text-sm"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+             />
+        </div>
+      </div>
+
+      {/* Results */}
+      <div className="space-y-3">
+         {loading ? (
+             <div className="text-center text-zinc-500 py-10">Поиск...</div>
+         ) : results.length === 0 ? (
+             <div className="text-center text-zinc-500 py-10">Программы не найдены</div>
+         ) : (
+             results.map((prog) => (
+                 <div key={prog.id} className="card p-4 hover:shadow-md transition border border-zinc-100 dark:border-zinc-800">
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xl">{prog.university?.country?.flagIcon}</span>
+                                <span className="text-xs font-bold text-zinc-500 uppercase">{prog.university?.name}</span>
+                                {prog.category && (
+                                    <span className="text-[10px] bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full ml-2">
+                                        {prog.category}
+                                    </span>
+                                )}
+                            </div>
+                            <h3 className="text-lg font-bold">{prog.title}</h3>
+                            <div className="flex gap-4 mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+                                <span>📅 Дедлайн: <b>{prog.deadline || "Не указан"}</b></span>
+                            </div>
+                        </div>
+                        {prog.link && (
+                            <a 
+                                href={prog.link} 
+                                target="_blank" 
+                                className="btn border border-zinc-200 dark:border-zinc-700 text-sm px-3 py-1"
+                            >
+                                На сайт ↗
+                            </a>
+                        )}
+                    </div>
+                 </div>
+             ))
+         )}
+      </div>
+    </div>
+  );
+}
+--- END FILE: apps/web/app/curator/programs-search/page.tsx ---
+
 --- BEGIN FILE: apps/web/app/curator/review/page.tsx ---
 "use client";
 import { useEffect, useState } from "react";
@@ -62868,478 +64567,734 @@ export default function ReviewPage() {
 }
 --- END FILE: apps/web/app/curator/review/page.tsx ---
 
+--- BEGIN FILE: apps/web/app/curator/student/[studentId]/EditProfileModal.tsx ---
+"use client";
+import { useState } from "react";
+import { useCountry } from "@/shared/CountryContext";
+
+type Props = {
+  student: any;
+  onClose: () => void;
+  onSave: (data: any) => void;
+};
+
+export default function EditProfileModal({ student, onClose, onSave }: Props) {
+  const { countries } = useCountry();
+  const [formData, setFormData] = useState({
+      fullName: student.fullName,
+      countryId: student.countryId
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      onSave(formData);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+      <div className="w-full max-w-md card p-6 bg-zinc-900">
+        <h2 className="text-lg font-bold mb-4">Редактировать профиль</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+                <label className="text-sm">ФИО</label>
+                <input 
+                    value={formData.fullName} 
+                    onChange={e => setFormData({...formData, fullName: e.target.value})}
+                    className="w-full mt-1 p-2 rounded bg-zinc-800 border border-zinc-700"
+                />
+            </div>
+            <div>
+                <label className="text-sm">Страна</label>
+                <select 
+                    value={formData.countryId}
+                    onChange={e => setFormData({...formData, countryId: e.target.value})}
+                    className="w-full mt-1 p-2 rounded bg-zinc-800 border border-zinc-700"
+                >
+                    {countries.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+                <button type="button" onClick={onClose} className="btn">Отмена</button>
+                <button type="submit" className="btn btn-primary">Сохранить</button>
+            </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+--- END FILE: apps/web/app/curator/student/[studentId]/EditProfileModal.tsx ---
+
 --- BEGIN FILE: apps/web/app/curator/student/[studentId]/page.tsx ---
 "use client";
-import { useMemo } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import allStudents from "@/mock/students.json";
-import allCountries from "@/mock/countries.json";
-import allProgress from "@/mock/student_progress.json";
-import allQuests from "@/mock/quest_templates.json";
+import { useCountry } from "@/shared/CountryContext";
+import EditProfileModal from "./EditProfileModal";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
 
 export default function StudentDossierPage() {
   const params = useParams();
-  const studentId = Number(params.studentId);
+  const studentId = params.studentId as string;
+  
+  const { countries, quests: allQuests } = useCountry();
+  const [student, setStudent] = useState<any>(null);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false); // Для модалки новой задачи
+  const [loading, setLoading] = useState(true);
+  
+  // Mock binding code (в реальности придет с API в объекте student)
+  const bindingCode = student?.bindingCode || `S-${Math.floor(1000 + Math.random() * 9000)}`;
 
-  const student = useMemo(() => allStudents.find(s => s.id === studentId), [studentId]);
-  const country = useMemo(() => allCountries.find(c => c.id === student?.country_id), [student]);
-  const progress = useMemo(() => (allProgress as any)[studentId] || {}, [studentId]);
+  const fetchStudentData = async () => {
+      const token = localStorage.getItem("accessToken");
+      try {
+        // 1. Получаем профиль студента (через эндпоинт пользователя или students/:id)
+        // В MVP мы добавили students/:id
+        const resS = await fetch(`${API_URL}/students/${studentId}`, { headers: { Authorization: `Bearer ${token}` }});
+        const sData = await resS.json();
+        // Мокаем binding code, если его нет
+        setStudent({ ...sData, bindingCode: sData.bindingCode || "S-4291" });
 
+        // 2. Получаем задачи (через админку пока нет эндпоинта "получить задачи конкретного юзера", 
+        // но в TasksService есть findAllForUser. 
+        // Для MVP используем заглушку или добавим эндпоинт в TasksController)
+        // *Временное решение:* покажем просто список, если есть доступ, или заглушку.
+        // В коде выше мы не добавили эндпоинт для куратора, чтобы смотреть задачи конкретного студента.
+        // Допустим, мы используем mock или добавим в TasksController позже.
+      } catch(e) { console.error(e); } finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchStudentData(); }, []);
+
+  // Мок создания задачи (Ad-hoc)
+  const handleCreateAdHocTask = async (taskTitle: string) => {
+      // Тут будет POST /tasks с studentId
+      alert(`Задача "${taskTitle}" назначена студенту (Mock)`);
+      setIsTaskModalOpen(false);
+  };
+
+  const country = useMemo(() => countries.find(c => c.id === student?.countryId), [student, countries]);
+
+  if (loading) return <div>Загрузка...</div>;
   if (!student || !country) {
     return <div>Студент не найден.</div>;
   }
 
-  const requiredQuests = allQuests.filter(q => country.required_quest_ids.includes(q.id));
+  // Mock quests filter (в реальности данные придут с бэка)
+  const requiredQuests = allQuests; // Пока показываем все шаблоны как пример
+
+  const handleResetPassword = async () => {
+      if(!confirm("Сбросить пароль студента на '12345678'?")) return;
+      const token = localStorage.getItem("accessToken");
+      await fetch(`${API_URL}/admin/users/${student.user.id}/reset-password`, {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
+      });
+      alert("Пароль сброшен");
+  };
+
+  const handleUpdateProfile = async (data: any) => {
+      const token = localStorage.getItem("accessToken");
+      await fetch(`${API_URL}/students/${student.id}`, {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify(data)
+      });
+      setIsEditOpen(false);
+      fetchStudentData();
+  };
 
   const approveQuest = (questId: number) => {
-    // В реальном приложении здесь будет вызов API
-    alert(`(Mock) Квест #${questId} для студента ${student.name} одобрен.`);
+    // ... (оставим как есть заглушку или подключим API)
+    alert(`(Mock) Квест #${questId} для студента ${student.fullName} одобрен.`);
   };
 
-  const rejectQuest = (questId: number) => {
-    // В реальном приложении здесь будет вызов API
-    const reason = prompt(`Причина отклонения квеста #${questId}:`);
-    alert(`(Mock) Квест #${questId} отклонен. Причина: ${reason}`);
-  };
+  const rejectQuest = (questId: number) => { /* ... */ };
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold">{student.name}</h1>
-        <p className="text-zinc-500">Досье студента | Операция: {country.flag_icon} {country.name}</p>
+      <div className="mb-6 flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-semibold">{student.fullName}</h1>
+          <p className="text-zinc-500">Досье студента | Операция: {country.flag_icon} {country.name}</p>
+        </div>
+        <div className="flex gap-2">
+            <button onClick={() => setIsEditOpen(true)} className="btn bg-zinc-200 text-black text-sm">Ред. профиль</button>
+            <button onClick={handleResetPassword} className="btn bg-red-100 text-red-700 text-sm">Сброс пароля</button>
+        </div>
+      </div>
+
+      {/* Блок Telegram и быстрых действий */}
+      <div className="grid md:grid-cols-2 gap-4 mb-6">
+        <div className="card p-4 flex items-center justify-between bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900">
+            <div>
+                <div className="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase">Telegram Binding</div>
+                <div className="text-2xl font-mono font-bold tracking-wider mt-1">{bindingCode}</div>
+                <div className="text-xs text-zinc-500 mt-1">Команда: <code>/link {bindingCode}</code></div>
+            </div>
+            <div className="text-3xl">🤖</div>
+        </div>
+        <div className="card p-4 flex items-center justify-between">
+             <div>
+                <div className="font-semibold">Индивидуальная задача</div>
+                <div className="text-xs text-zinc-500">Назначить задачу вне общего плана</div>
+            </div>
+            <button onClick={() => setIsTaskModalOpen(true)} className="btn btn-primary text-sm">+ Задача</button>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        <section className="lg:col-span-2 card p-4">
-          <h2 className="text-lg font-semibold mb-3">Трекер Квестов</h2>
-          <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
-            {requiredQuests.map(quest => {
-              const questProgress = progress[quest.id];
-              const status = questProgress?.status || 'todo';
-
-              return (
-                <div key={quest.id} className="p-3 rounded-xl border bg-zinc-50 dark:bg-zinc-800/50">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-sm">{quest.title}</span>
-                    {status === 'done' && <span className="text-xs px-2 py-1 rounded-full bg-green-500/10 text-green-600">Одобрен ✅</span>}
-                    {status === 'review' && <span className="text-xs px-2 py-1 rounded-full bg-yellow-500/10 text-yellow-700">На проверке ⏳</span>}
-                    {status === 'todo' && <span className="text-xs px-2 py-1 rounded-full bg-zinc-500/10 text-zinc-500">Не выполнен</span>}
-                  </div>
-                  {questProgress?.submission && (
-                    <div className="mt-2 text-xs border-t pt-2 text-zinc-500">
-                      <p><b>Результат:</b> {typeof questProgress.submission === 'object' ? JSON.stringify(questProgress.submission) : questProgress.submission}</p>
-                    </div>
-                  )}
-                  {status === 'review' && (
-                    <div className="mt-3 flex items-center gap-2">
-                      <button onClick={() => approveQuest(quest.id)} className="btn btn-primary text-xs !py-1">Одобрить</button>
-                      <button onClick={() => rejectQuest(quest.id)} className="btn text-xs !py-1 bg-red-500/10 text-red-600">Отклонить</button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        <aside className="space-y-6">
-          <div className="card p-4">
-            <h2 className="text-lg font-semibold mb-3">Академический Профиль</h2>
-            <ul className="text-sm space-y-2">
-              <li><b>Email:</b> {student.email}</li>
-              <li><b>GPA:</b> {student.gpa}</li>
-              <li><b>IELTS:</b> {student.ielts_score}</li>
-            </ul>
-          </div>
-          <div className="card p-4">
-             <h2 className="text-lg font-semibold mb-3">Выбранные программы</h2>
-             <ul className="text-sm space-y-1 list-disc list-inside">
-                {student.selected_program_ids.map(id => <li key={id}>Программа #{id}</li>)}
-             </ul>
-          </div>
-        </aside>
+        {/* ... остальной код рендера задач ... */}
       </div>
+      
+      {isEditOpen && (
+          <EditProfileModal student={student} onClose={() => setIsEditOpen(false)} onSave={handleUpdateProfile} />
+      )}
+      
+      {/* Простая модалка создания задачи (инлайн) */}
+      {isTaskModalOpen && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+            <div className="card p-6 w-full max-w-md">
+                <h3 className="font-bold mb-4">Новая задача</h3>
+                <form onSubmit={(e) => {
+                    e.preventDefault();
+                    const formData = new FormData(e.currentTarget);
+                    handleCreateAdHocTask(formData.get('title') as string);
+                }}>
+                    <label className="block text-sm mb-1">Название задачи</label>
+                    <input name="title" required className="w-full p-2 border rounded-lg bg-zinc-50 dark:bg-zinc-800 mb-4" placeholder="Напр: Переделать справку" />
+                    
+                    <label className="block text-sm mb-1">Описание (опционально)</label>
+                    <textarea name="desc" className="w-full p-2 border rounded-lg bg-zinc-50 dark:bg-zinc-800 mb-4" rows={3} />
+                    
+                    <div className="flex justify-end gap-2">
+                        <button type="button" onClick={() => setIsTaskModalOpen(false)} className="btn">Отмена</button>
+                        <button type="submit" className="btn btn-primary">Назначить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+      )}
     </div>
   );
 }
 --- END FILE: apps/web/app/curator/student/[studentId]/page.tsx ---
 
---- BEGIN FILE: apps/web/app/curator/students/AddStudentModal.tsx ---
+--- BEGIN FILE: apps/web/app/curator/students/StudentModal.tsx ---
 "use client";
+import { useState, useEffect } from "react";
 import { useCountry } from "@/shared/CountryContext";
-import { useMemo, useState } from "react";
-import type { Student } from "./page";
+import { useAuth } from "@/shared/AuthContext";
 
-type Props = {
-  onClose: () => void;
-  onSave: (data: Omit<Student, 'id'>) => void;
+export type StudentFull = {
+  id: string;
+  fullName: string;
+  email: string;
+  countryId: string;
+  xpTotal: number;
+  isActive: boolean;
+  bindingCode: string;
 };
 
-export default function AddStudentModal({ onClose, onSave }: Props) {
-  const { countries, universities, quests } = useCountry();
+type Props = {
+  student?: StudentFull | null;
+  onClose: () => void;
+  onSave: (data: Partial<StudentFull>) => Promise<void>;
+};
 
-  // Состояние для всего процесса
-  const [currentStep, setCurrentStep] = useState(1);
-  const [studentName, setStudentName] = useState("");
-  const [selectedCountryId, setSelectedCountryId] = useState(countries[0]?.id || "");
-  const [selectedUniversityIds, setSelectedUniversityIds] = useState<string[]>([]);
-  const [selectedQuestIds, setSelectedQuestIds] = useState<number[]>([]);
-  // --- НОВОЕ: Состояние для кастомных задач ---
-  const [customQuests, setCustomQuests] = useState<{ id: number; title: string }[]>([]);
-  const [newCustomQuestTitle, setNewCustomQuestTitle] = useState("");
+export default function StudentModal({ student, onClose, onSave }: Props) {
+  const { countries } = useCountry();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  const isEdit = !!student;
+  const isViewOnly = !isAdmin && isEdit; // For curators, view only when editing
 
-  // Фильтруем квесты на основе выбранной страны
-  const availableQuests = useMemo(() => {
-    const country = countries.find(c => c.id === selectedCountryId);
-    if (!country) return [];
-    const requiredIds = new Set(country.required_quest_ids);
-    return quests.filter(q => requiredIds.has(q.id));
-  }, [selectedCountryId, countries, quests]);
+  const [fullName, setFullName] = useState(student?.fullName || "");
+  const [email, setEmail] = useState(student?.email || "");
+  const [countryId, setCountryId] = useState(student?.countryId || countries[0]?.id || "");
+  const [isActive, setIsActive] = useState(student?.isActive ?? true);
+  const [loading, setLoading] = useState(false);
 
-  // --- НОВОЕ: Логика для добавления и удаления кастомных задач ---
-  const handleAddCustomQuest = () => {
-    if (!newCustomQuestTitle.trim()) return;
-    const newId = -Date.now(); // Уникальный отрицательный ID
-    const newQuest = { id: newId, title: newCustomQuestTitle.trim() };
-
-    setCustomQuests(prev => [...prev, newQuest]);
-    setSelectedQuestIds(prev => [...prev, newId]); // Автоматически выбираем новую задачу
-    setNewCustomQuestTitle(""); // Сбрасываем поле ввода
-  };
-
-  const handleRemoveCustomQuest = (idToRemove: number) => {
-    setCustomQuests(prev => prev.filter(q => q.id !== idToRemove));
-    setSelectedQuestIds(prev => prev.filter(id => id !== idToRemove));
-  };
-
-  const handleNext = () => {
-    if (currentStep === 1 && !studentName) {
-      alert("Пожалуйста, введите имя студента.");
-      return;
+  useEffect(() => {
+    if (student) {
+      setFullName(student.fullName);
+      setEmail(student.email);
+      setCountryId(student.countryId);
+      setIsActive(student.isActive ?? true);
+    } else {
+      setFullName("");
+      setEmail("");
+      setCountryId(countries[0]?.id || "");
+      setIsActive(true);
     }
-    setCurrentStep(prev => prev + 1);
+  }, [student, countries]);
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!isAdmin || isViewOnly) return; // Don't save in view only
+
+    setLoading(true);
+    const data: Partial<StudentFull> = {
+      fullName,
+      email,
+      countryId,
+      isActive,
+    };
+    if (isEdit) {
+      data.id = student!.id;
+    }
+    try {
+      await onSave(data);
+      onClose();
+    } catch (error) {
+      console.error(error);
+      alert("Ошибка при сохранении");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleBack = () => setCurrentStep(prev => prev - 1);
-
-  const handleSave = () => {
-    onSave({
-      name: studentName,
-      countryId: selectedCountryId,
-      assignedUniversityIds: selectedUniversityIds,
-      assignedQuestIds: selectedQuestIds,
-      customQuests: customQuests,
-    });
-  };
-
-  // --- Функции для рендеринга каждого шага ---
-
-  const renderStepOne = () => (
-    <div>
-      <h3 className="text-lg font-semibold mb-4">Шаг 1: Основная информация</h3>
-      <div className="space-y-4">
-        <div>
-          <label className="text-sm">Имя и Фамилия</label>
-          <input type="text" value={studentName} onChange={e => setStudentName(e.target.value)} className="w-full mt-1 rounded-xl border p-2 bg-white dark:bg-zinc-800" />
-        </div>
-        <div>
-          <label className="text-sm">Страна поступления</label>
-          <select value={selectedCountryId} onChange={e => setSelectedCountryId(e.target.value)} className="w-full mt-1 rounded-xl border p-2 bg-white dark:bg-zinc-800">
-            {countries.map(c => <option key={c.id} value={c.id}>{c.flag_icon} {c.name}</option>)}
-          </select>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderStepTwo = () => (
-    <div>
-      <h3 className="text-lg font-semibold mb-4">Шаг 2: Выбор университетов</h3>
-      <div className="max-h-64 overflow-y-auto space-y-2 pr-2">
-        {universities.map(uni => (
-          <label key={uni.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/10 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={selectedUniversityIds.includes(uni.id)}
-              onChange={() => {
-                setSelectedUniversityIds(prev =>
-                  prev.includes(uni.id) ? prev.filter(id => id !== uni.id) : [...prev, uni.id]
-                );
-              }}
-            />
-            <span>{uni.logo_url} {uni.name}</span>
-          </label>
-        ))}
-      </div>
-    </div>
-  );
-
-  const renderStepThree = () => (
-    <div>
-      <h3 className="text-lg font-semibold mb-4">Шаг 3: Назначение задач</h3>
-      <p className="text-xs text-zinc-400 mb-2">Отображены задачи для страны: {countries.find(c => c.id === selectedCountryId)?.name}</p>
-      <div className="max-h-64 overflow-y-auto space-y-2 pr-2">
-        {availableQuests.map(quest => (
-          <label key={quest.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/10 cursor-pointer">
-             <input
-              type="checkbox"
-              checked={selectedQuestIds.includes(quest.id)}
-              onChange={() => {
-                setSelectedQuestIds(prev =>
-                  prev.includes(quest.id) ? prev.filter(id => id !== quest.id) : [...prev, quest.id]
-                );
-              }}
-            />
-            <span className="text-sm">{quest.title}</span>
-          </label>
-        ))}
-      </div>
-      {/* --- НОВОЕ: Блок для добавления своих задач --- */}
-      <div className="border-t border-white/10 pt-4 mt-4">
-        <h4 className="font-semibold text-sm mb-2">Добавить свою задачу</h4>
-        <div className="flex gap-2">
-            <input
-                type="text"
-                placeholder="Название задачи"
-                className="flex-1 rounded-xl border p-2 bg-white dark:bg-zinc-800 text-sm"
-                value={newCustomQuestTitle}
-                onChange={e => setNewCustomQuestTitle(e.target.value)}
-            />
-            <button className="btn btn-primary text-sm" onClick={handleAddCustomQuest}>Добавить</button>
-        </div>
-        <div className="space-y-2 mt-3 max-h-24 overflow-y-auto pr-2">
-            {customQuests.map(quest => (
-                <div key={quest.id} className="flex items-center justify-between p-2 rounded-lg bg-white/5">
-                    <label className="flex items-center gap-3 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={selectedQuestIds.includes(quest.id)}
-                            onChange={() => {
-                                setSelectedQuestIds(prev =>
-                                    prev.includes(quest.id) ? prev.filter(id => id !== quest.id) : [...prev, quest.id]
-                                );
-                            }}
-                        />
-                        <span className="text-sm">{quest.title}</span>
-                    </label>
-                    <button onClick={() => handleRemoveCustomQuest(quest.id)} className="text-red-400 hover:text-red-500 text-xl leading-none">&times;</button>
-                </div>
-            ))}
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderStepFour = () => (
-    <div>
-      <h3 className="text-lg font-semibold mb-4">Шаг 4: Проверка и сохранение</h3>
-      <div className="space-y-3 text-sm">
-        <p><b>Имя:</b> {studentName}</p>
-        <p><b>Страна:</b> {countries.find(c => c.id === selectedCountryId)?.name}</p>
-        <div>
-            <b>Университеты:</b>
-            <ul className="list-disc list-inside pl-2 text-xs">
-                {universities.filter(u => selectedUniversityIds.includes(u.id)).map(u => <li key={u.id}>{u.name}</li>)}
-            </ul>
-        </div>
-        <div>
-            <b>Задачи:</b>
-            <ul className="list-disc list-inside pl-2 text-xs">
-                {quests.filter(q => selectedQuestIds.includes(q.id)).map(q => <li key={q.id}>{q.title}</li>)}
-                {customQuests.filter(q => selectedQuestIds.includes(q.id)).map(q => <li key={q.id}><i>{q.title} (своя задача)</i></li>)}
-            </ul>
-        </div>
-      </div>
-    </div>
-  );
-
+  const inputClass = "w-full p-2 border rounded dark:bg-zinc-800 disabled:bg-zinc-700 disabled:cursor-not-allowed";
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={onClose}>
-      <div className="w-full max-w-2xl card p-6 bg-zinc-900" onClick={e => e.stopPropagation()}>
-        <div className="flex justify-between items-start">
-            <h2 className="text-xl font-bold mb-1">Новый студент</h2>
-            <button onClick={onClose} className="text-2xl leading-none">&times;</button>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={onClose}>
+      <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg max-w-md w-full max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">
+            {isViewOnly ? "Профиль студента" : isEdit ? "Редактировать студента" : "Новый студент"}
+          </h2>
+          <button onClick={onClose} className="text-2xl">&times;</button>
         </div>
-        <p className="text-sm text-zinc-400 mb-6">Шаг {currentStep} из 4</p>
-
-        <div className="min-h-[20rem]">
-            {currentStep === 1 && renderStepOne()}
-            {currentStep === 2 && renderStepTwo()}
-            {currentStep === 3 && renderStepThree()}
-            {currentStep === 4 && renderStepFour()}
-        </div>
-
-        {/* Навигация */}
-        <div className="border-t border-white/10 pt-4 mt-4 flex justify-between items-center">
-          <div>
-            {currentStep > 1 && (
-              <button className="btn" onClick={handleBack}>Назад</button>
+        <form onSubmit={!isViewOnly ? handleSubmit : undefined}>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Полное имя</label>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                disabled={isViewOnly}
+                required={!isViewOnly}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isViewOnly}
+                required={!isViewOnly}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Страна</label>
+              <select
+                value={countryId}
+                onChange={(e) => setCountryId(e.target.value)}
+                disabled={isViewOnly}
+                required={!isViewOnly}
+                className={inputClass}
+              >
+                {countries.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.flag_icon} {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="isActive"
+                checked={isActive}
+                onChange={(e) => setIsActive(e.target.checked)}
+                disabled={isViewOnly}
+                className="mr-2"
+              />
+              <label htmlFor="isActive" className="text-sm">Активен</label>
+            </div>
+            {isEdit && (
+              <div className="text-sm text-zinc-500">
+                <p>XP: {student!.xpTotal}</p>
+                <p>Код привязки: {student!.bindingCode}</p>
+              </div>
             )}
           </div>
-          <div>
-            {currentStep < 4 ? (
-              <button className="btn btn-primary" onClick={handleNext}>Далее</button>
-            ) : (
-              <button className="btn btn-primary" onClick={handleSave}>Сохранить студента</button>
+          <div className="flex justify-end gap-2 mt-6">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 border rounded"
+              disabled={loading}
+            >
+              Закрыть
+            </button>
+            {!isViewOnly && (
+              <button
+                type="submit"
+                className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
+                disabled={loading}
+              >
+                {loading ? "Сохранение..." : isEdit ? "Сохранить" : "Создать"}
+              </button>
             )}
           </div>
-        </div>
-
+        </form>
       </div>
     </div>
   );
 }
---- END FILE: apps/web/app/curator/students/AddStudentModal.tsx ---
+--- END FILE: apps/web/app/curator/students/StudentModal.tsx ---
 
 --- BEGIN FILE: apps/web/app/curator/students/page.tsx ---
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useCountry } from "@/shared/CountryContext";
-import AddStudentModal from "./AddStudentModal";
+import { useAuth } from "@/shared/AuthContext";
+import StudentModal from "./StudentModal";
+import Avatar from "@/shared/Avatar";
+import QuestDetailModal from "@/app/student/quests/QuestDetailModal";
 
-// --- ИЗМЕНЕНИЕ: Модель студента расширена для хранения индивидуальных настроек ---
-export type Student = {
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
+
+type StudentFull = {
   id: string;
-  name: string;
+  fullName: string;
+  email: string;
   countryId: string;
-  assignedUniversityIds: string[];
-  assignedQuestIds: number[];
-  customQuests?: { id: number; title: string }[];
+  xpTotal: number;
+  isActive: boolean;
+  bindingCode: string;
 };
 
-// --- НОВОЕ: Мок-данные для демонстрации UI как на скриншоте ---
-const mockStudentProgress = [
-  {
-    id: "mock_1",
-    name: "Артём Ганеев",
-    countryId: "it",
-    completedQuests: 4,
-    totalQuests: 9,
-    reviewQuests: 1,
-  },
-  {
-    id: "mock_2",
-    name: "Вероника Смирнова",
-    countryId: "at",
-    completedQuests: 2,
-    totalQuests: 8,
-    reviewQuests: 1,
-  },
-  {
-    id: "mock_3",
-    name: "Иван Петров",
-    countryId: "at",
-    completedQuests: 0,
-    totalQuests: 8,
-    reviewQuests: 1,
-  },
-];
+// Simplified Task type for the Kanban
+type StudentTask = {
+  id: number;
+  title: string;
+  status: "TODO" | "REVIEW" | "CHANGES_REQUESTED" | "DONE";
+  xpReward: number;
+  stage: string;
+  description: string;
+};
 
-const STORAGE_KEY = "managedStudents";
+// Mock data generator for tasks (since we don't have a direct admin-get-tasks endpoint yet)
+const generateMockTasks = (studentId: string, countryId: string): StudentTask[] => {
+    return [
+        { id: 101, title: "Создать почту Gmail", status: "DONE", xpReward: 20, stage: "Подготовка", description: "..." },
+        { id: 102, title: "Загрузить паспорт", status: "REVIEW", xpReward: 30, stage: "Документы", description: "..." },
+        { id: 103, title: "Апостиль аттестата", status: "CHANGES_REQUESTED", xpReward: 50, stage: "Документы", description: "..." },
+        { id: 104, title: "Запись на IELTS", status: "TODO", xpReward: 80, stage: "Экзамены", description: "..." },
+        { id: 105, title: "Мотивационное письмо", status: "TODO", xpReward: 60, stage: "Творчество", description: "..." },
+    ];
+};
 
 export default function StudentPanelPage() {
   const { countries } = useCountry();
-  const [students, setStudents] = useState<Student[]>([]);
-  // --- НОВОЕ: Состояние для управления модальным окном ---
+  const { user } = useAuth();
+  
+  const [students, setStudents] = useState<StudentFull[]>([]);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  
+  // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<StudentFull | null>(null);
 
-  useEffect(() => {
-    // Загружаем студентов из localStorage, если они есть
+  // Task Modal state
+  const [selectedTask, setSelectedTask] = useState<StudentTask | null>(null);
+
+  // Data fetching
+  const fetchStudents = async () => {
+    const token = localStorage.getItem("accessToken");
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setStudents(JSON.parse(raw));
-    } catch {}
-  }, []);
-
-  // --- НОВОЕ: Функция сохранения студента из модального окна ---
-  const handleSaveStudent = (newStudentData: Omit<Student, 'id'>) => {
-    const newStudent: Student = { ...newStudentData, id: `student_${Date.now()}`};
-    const updatedStudents = [...students, newStudent];
-    setStudents(updatedStudents);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedStudents));
-    setIsModalOpen(false); // Закрываем модальное окно после сохранения
+        const res = await fetch(`${API_URL}/admin/students`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        if(res.ok) {
+            const data = await res.json();
+            setStudents(data);
+            if (!selectedStudentId && data.length > 0) setSelectedStudentId(data[0].id);
+        }
+    } catch(e) { console.error(e); } finally { setLoading(false); }
   };
 
-  // Объединяем мок-данных и реальных студентов для отображения
-  const allStudents = useMemo(() => {
-    const combined = [...mockStudentProgress];
-    // Добавляем реальных студентов, но без прогресса (т.к. он не хранится)
-    students.forEach(s => {
-      combined.push({
-        ...s,
-        completedQuests: 0,
-        // Для новых студентов считаем прогресс на лету (пока 0)
-        totalQuests: s.assignedQuestIds.length,
-        reviewQuests: 0,
-      });
-    });
-    return combined;
-  }, [students]);
+  useEffect(() => {
+    fetchStudents();
+  }, []);
+
+  // Filter students
+  const filteredStudents = useMemo(() => {
+    if (!searchTerm) return students;
+    const lower = searchTerm.toLowerCase();
+    return students.filter(s => 
+        s.fullName.toLowerCase().includes(lower) || 
+        s.email?.toLowerCase().includes(lower)
+    );
+  }, [students, searchTerm]);
+
+  const activeStudent = useMemo(() => 
+    students.find(s => s.id === selectedStudentId), 
+  [students, selectedStudentId]);
+
+  const activeCountry = useMemo(() => 
+    countries.find(c => c.id === activeStudent?.countryId),
+  [countries, activeStudent]);
+
+  // Tasks for Kanban
+  // In a real app, we would fetch these from API when activeStudent changes
+  const studentTasks = useMemo(() => {
+      if (!activeStudent) return [];
+      return generateMockTasks(activeStudent.id, activeStudent.countryId);
+  }, [activeStudent]);
+
+  // Admin Actions
+  const handleSaveStudent = async (data: any) => {
+    const token = localStorage.getItem("accessToken");
+    let res;
+    
+    if (data.id) {
+        res = await fetch(`${API_URL}/admin/students/${data.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify(data)
+        });
+    } else {
+        res = await fetch(`${API_URL}/admin/students`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify(data)
+        });
+    }
+
+    if (res.ok) {
+        await fetchStudents();
+        return await res.json();
+    } else {
+        throw new Error("Failed");
+    }
+  };
+
+  if (loading) return <div className="p-8 text-zinc-500">Загрузка данных...</div>;
+
+  // Kanban Columns Data
+  const columns = {
+    todo: studentTasks.filter(t => t.status === "TODO"),
+    review: studentTasks.filter(t => t.status === "REVIEW" || t.status === "CHANGES_REQUESTED"),
+    done: studentTasks.filter(t => t.status === "DONE"),
+  };
 
   return (
-    <div>
-      <div>
-        <h1 className="text-2xl font-semibold">Панель Студентов</h1>
-        <p className="text-zinc-600 dark:text-zinc-300 mb-6">Обзор прогресса всех активных студентов.</p>
-        {/* --- НОВОЕ: Кнопки для открытия модального окна и импорта --- */}
-        <div className="flex gap-2 mb-6">
-          <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
-            + Добавить студента
-          </button>
-          <button className="btn bg-white text-black">
-            Импорт данных студентов
-          </button>
-        </div>
+    <div className="h-[calc(100vh-6rem)] flex flex-col">
+      <div className="mb-4">
+        <h1 className="text-2xl font-semibold">Студенты</h1>
+        <p className="text-zinc-400 text-sm">База данных абитуриентов и управление задачами.</p>
       </div>
 
-      <div className="space-y-4">
-        {allStudents.map((student) => {
-            const country = countries.find((c) => c.id === student.countryId);
-            const progressPercentage = student.totalQuests > 0 ? (student.completedQuests / student.totalQuests) * 100 : 0;
-            const isLowProgress = progressPercentage < 30 && student.completedQuests < 3;
+      <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-6 h-full overflow-hidden">
+        
+        {/* === Left Column: Student List === */}
+        <div className="card flex flex-col overflow-hidden bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+            <div className="p-3 border-b border-zinc-100 dark:border-zinc-800 space-y-3">
+                {/* Search */}
+                <div className="relative">
+                    <input 
+                        type="text" 
+                        placeholder="Поиск..." 
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        className="w-full bg-zinc-100 dark:bg-zinc-800 border-none rounded-xl py-2 pl-9 pr-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                    <span className="absolute left-3 top-2.5 text-zinc-400">🔍</span>
+                </div>
+                
+                {/* Add Button */}
+                {user?.role === 'admin' && (
+                    <button 
+                        onClick={() => { setEditingStudent(null); setIsModalOpen(true); }}
+                        className="w-full btn btn-primary text-xs py-2"
+                    >
+                        + Новый студент
+                    </button>
+                )}
+            </div>
+            
+            <div className="overflow-y-auto p-2 flex-1">
+                {filteredStudents.length === 0 ? (
+                    <div className="text-center py-8 text-zinc-500 text-sm">Нет студентов</div>
+                ) : (
+                    <ul className="space-y-1">
+                        {filteredStudents.map(student => (
+                            <li key={student.id}>
+                                <button
+                                    onClick={() => setSelectedStudentId(student.id)}
+                                    className={`w-full text-left px-3 py-3 rounded-xl transition flex items-center gap-3 ${
+                                        selectedStudentId === student.id 
+                                        ? "bg-black text-white dark:bg-zinc-800 shadow-md" 
+                                        : "hover:bg-zinc-100 dark:hover:bg-zinc-800/50"
+                                    }`}
+                                >
+                                    <Avatar name={student.fullName} level={Math.floor(student.xpTotal/200)+1} className="w-8 h-8 text-xs" />
+                                    <div className="overflow-hidden flex-1">
+                                        <div className="font-medium text-sm truncate">{student.fullName}</div>
+                                        <div className={`text-xs truncate ${selectedStudentId === student.id ? "text-zinc-400" : "text-zinc-500"}`}>
+                                            {student.email}
+                                        </div>
+                                    </div>
+                                    {!student.isActive && (
+                                        <span className="w-2 h-2 rounded-full bg-red-500" title="Отключен"></span>
+                                    )}
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
+        </div>
 
-            return (
-                <div key={student.id} className="card p-4 bg-zinc-800/50">
-                    <div className="grid grid-cols-[1fr_auto] gap-4">
+        {/* === Right Column: Kanban Dashboard === */}
+        {activeStudent ? (
+            <div className="flex flex-col h-full overflow-hidden">
+                {/* Header Info */}
+                <div className="card p-4 mb-4 flex justify-between items-center bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                    <div className="flex items-center gap-4">
+                        <Avatar name={activeStudent.fullName} level={Math.floor(activeStudent.xpTotal/200)+1} className="w-12 h-12 text-lg" />
                         <div>
-                            <h3 className="text-lg font-semibold">{student.name}</h3>
-                            <div className="text-sm text-zinc-400 flex items-center gap-2">
-                                {country?.flag_icon} {country?.name || "Неизвестная страна"}
-                            </div>
-                        </div>
-                        <div className="text-right">
-                            <div className="text-sm font-medium">Прогресс</div>
-                            <div className="text-xs text-zinc-400 mb-1">{student.completedQuests} / {student.totalQuests} квестов</div>
-                            <div className="w-32 bg-zinc-700 rounded-full h-2">
-                                <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${progressPercentage}%` }}></div>
+                            <h2 className="text-lg font-bold">{activeStudent.fullName}</h2>
+                            <div className="flex items-center gap-2 text-xs text-zinc-500">
+                                <span>{activeCountry?.flag_icon} {activeCountry?.name || "Нет страны"}</span>
+                                <span>•</span>
+                                <span className="font-mono text-blue-500">{activeStudent.bindingCode}</span>
+                                <span>•</span>
+                                <span className="text-yellow-600 font-bold">{activeStudent.xpTotal} XP</span>
                             </div>
                         </div>
                     </div>
-                    <div className="border-t border-white/10 my-3"></div>
-                    <div className="flex items-center gap-2">
-                        {student.reviewQuests > 0 && (
-                            <div className="text-xs font-medium px-3 py-1 rounded-full bg-yellow-500/20 text-yellow-400">
-                                На проверке: {student.reviewQuests} квеста
-                            </div>
-                        )}
-                        {isLowProgress && (
-                            <div className="text-xs font-medium px-3 py-1 rounded-full bg-red-500/20 text-red-400">
-                                Низкий прогресс
-                            </div>
-                        )}
+                    <div>
+                        <button 
+                             onClick={() => { setEditingStudent(activeStudent); setIsModalOpen(true); }}
+                             className="text-xs bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 px-3 py-1.5 rounded-lg transition"
+                        >
+                            {user?.role === 'admin' ? '⚙️ Настройки' : '👁️ Профиль'}
+                        </button>
                     </div>
                 </div>
-            );
-        })}
+
+                {/* Kanban Board */}
+                <div className="flex-1 overflow-x-auto overflow-y-hidden">
+                    <div className="grid grid-cols-3 gap-4 h-full min-w-[800px]">
+                        
+                        {/* Column: To Do */}
+                        <div className="flex flex-col h-full">
+                            <div className="mb-2 flex items-center justify-between px-1">
+                                <span className="text-xs font-bold uppercase text-zinc-500">К выполнению</span>
+                                <span className="text-xs bg-zinc-200 dark:bg-zinc-800 px-2 py-0.5 rounded-full">{columns.todo.length}</span>
+                            </div>
+                            <div className="flex-1 bg-zinc-100/50 dark:bg-zinc-900/30 rounded-xl p-2 overflow-y-auto space-y-2 border border-zinc-200/50 dark:border-zinc-800/50">
+                                {columns.todo.map(task => (
+                                    <TaskCard key={task.id} task={task} onClick={() => setSelectedTask(task)} />
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Column: In Review */}
+                        <div className="flex flex-col h-full">
+                            <div className="mb-2 flex items-center justify-between px-1">
+                                <span className="text-xs font-bold uppercase text-blue-500">На проверке</span>
+                                <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full">{columns.review.length}</span>
+                            </div>
+                            <div className="flex-1 bg-blue-50/30 dark:bg-blue-900/10 rounded-xl p-2 overflow-y-auto space-y-2 border border-blue-100/50 dark:border-blue-900/20">
+                                {columns.review.map(task => (
+                                    <TaskCard key={task.id} task={task} onClick={() => setSelectedTask(task)} />
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Column: Done */}
+                        <div className="flex flex-col h-full">
+                            <div className="mb-2 flex items-center justify-between px-1">
+                                <span className="text-xs font-bold uppercase text-green-500">Готово</span>
+                                <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 px-2 py-0.5 rounded-full">{columns.done.length}</span>
+                            </div>
+                            <div className="flex-1 bg-green-50/30 dark:bg-green-900/10 rounded-xl p-2 overflow-y-auto space-y-2 border border-green-100/50 dark:border-green-900/20">
+                                {columns.done.map(task => (
+                                    <TaskCard key={task.id} task={task} onClick={() => setSelectedTask(task)} />
+                                ))}
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        ) : (
+            <div className="flex flex-col items-center justify-center text-zinc-400 h-full card bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-4xl mb-3 opacity-50">👨‍🎓</div>
+                <p>Выберите студента из списка</p>
+            </div>
+        )}
       </div>
 
-      {/* --- НОВОЕ: Рендер модального окна --- */}
       {isModalOpen && (
-        <AddStudentModal onClose={() => setIsModalOpen(false)} onSave={handleSaveStudent} />
+          <StudentModal 
+            student={editingStudent}
+            onClose={() => setIsModalOpen(false)}
+            onSave={handleSaveStudent}
+          />
+      )}
+
+      {selectedTask && (
+          // Reusing the existing Quest Detail Modal for viewing
+          <QuestDetailModal 
+            quest={{
+                ...selectedTask, 
+                // Adding missing props for modal compatibility
+                submission: null 
+            } as any} 
+            onClose={() => setSelectedTask(null)} 
+          />
       )}
     </div>
   );
+}
+
+// Subcomponent for Task Card
+function TaskCard({ task, onClick }: { task: StudentTask; onClick: () => void }) {
+    const isReview = task.status === 'REVIEW';
+    const isChanges = task.status === 'CHANGES_REQUESTED';
+    
+    return (
+        <div 
+            onClick={onClick}
+            className={`
+                p-3 rounded-lg border shadow-sm cursor-pointer transition hover:shadow-md
+                ${isReview ? 'bg-white dark:bg-zinc-800 border-blue-200 dark:border-blue-900' : 
+                  isChanges ? 'bg-white dark:bg-zinc-800 border-red-200 dark:border-red-900' :
+                  'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700'}
+            `}
+        >
+            <div className="flex justify-between items-start gap-2">
+                <span className="text-xs font-medium text-zinc-500 uppercase tracking-tight">{task.stage}</span>
+                <span className="text-xs font-bold text-yellow-600 dark:text-yellow-500">+{task.xpReward}</span>
+            </div>
+            <div className="font-medium text-sm mt-1 mb-2 line-clamp-2">{task.title}</div>
+            
+            {isChanges && (
+                <div className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded inline-block">
+                    Требуются правки
+                </div>
+            )}
+             {isReview && (
+                <div className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded inline-block">
+                    Ждет проверки
+                </div>
+            )}
+        </div>
+    );
 }
 --- END FILE: apps/web/app/curator/students/page.tsx ---
 
@@ -63451,7 +65406,12 @@ import { useAuth } from "@/shared/AuthContext";
    useEffect(() => {
      // Если пользователь уже залогинен, перенаправляем его
      if (auth.user) {
-       router.replace(auth.user.role === "student" ? "/student/dashboard" : "/curator/dashboard");
+       const role = auth.user.role.toLowerCase();
+       if (role === "student") {
+           router.replace("/student/dashboard");
+       } else {
+           router.replace("/curator/dashboard");
+       }
      }
    }, [auth.user, router]);
 
@@ -63651,15 +65611,16 @@ import { useCountry } from "@/shared/CountryContext";
 import { useProgress } from "@/shared/ProgressContext";
 import Link from "next/link";
 import { useMemo } from "react";
+import Avatar from "@/shared/Avatar";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const { selectedCountry, quests } = useCountry(); // documents не используется здесь напрямую
   const { tasks } = useProgress(); // Используем tasks вместо progress
 
-  const { totalQuests, completedQuests, progressPercentage, totalXp } = useMemo(() => {
+  const { totalQuests, completedQuests, progressPercentage, totalXp, level } = useMemo(() => {
     if (!selectedCountry) {
-      return { totalQuests: 0, completedQuests: 0, progressPercentage: 0, totalXp: 0 };
+      return { totalQuests: 0, completedQuests: 0, progressPercentage: 0, totalXp: 0, level: 1 };
     }
 
     // 1. Определяем ID и Заголовки обязательных квестов для выбранной страны
@@ -63683,12 +65644,16 @@ export default function Dashboard() {
 
     // 4. Считаем XP (берем награду из выполненных задач)
     const xp = relevantCompletedTasks.reduce((sum, t) => sum + (t.xpReward || 0), 0);
+    
+    // Уровень: каждые 200 XP
+    const level = Math.floor(xp / 200) + 1;
 
     return {
       totalQuests: requiredQuestIds.size,
       completedQuests: relevantCompletedTasks.length,
       progressPercentage: progressValue,
       totalXp: xp,
+      level
     };
   }, [selectedCountry, tasks, quests]);
 
@@ -63701,9 +65666,11 @@ export default function Dashboard() {
 
       <div className="grid sm:grid-cols-[1fr_2fr] gap-6 mb-6">
         <div className="card p-4 flex flex-col items-center text-center">
-          <div className="text-5xl mb-2">🎓</div>
+          <div className="mb-3">
+             <Avatar name={user?.name || "Student"} level={level} className="w-20 h-20 text-3xl" />
+          </div>
           <div className="font-semibold">{user?.name}</div>
-          <div className="text-sm text-zinc-500">Уровень 1</div>
+          <div className="text-sm text-zinc-500">Уровень {level}</div>
           <div className="mt-2 text-lg font-bold text-yellow-500">{totalXp} XP</div>
         </div>
         <div className="card p-4">
@@ -64048,12 +66015,16 @@ export default function ProgramsPage() {
 
 --- BEGIN FILE: apps/web/app/student/quests/QuestDetailModal.tsx ---
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
+
 import { useProgress, Task } from "@/shared/ProgressContext";
 
 type Props = {
   quest: Task & {
     submission_type?: "none" | "text" | "link" | "file" | "credentials";
+    comment?: string; // Добавляем поле комментария
     submission_label?: string; // For simple types
     submission_fields?: { key: string; label: string }[]; // For complex types
   };
@@ -64065,6 +66036,8 @@ export default function QuestDetailModal({ quest, onClose }: Props) {
   const [inputValue, setInputValue] = useState<any>("");
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
 
   useEffect(() => {
     // Инициализация значения
@@ -64078,6 +66051,49 @@ export default function QuestDetailModal({ quest, onClose }: Props) {
     onClose();
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!e.target.files?.[0]) return;
+      setUploading(true);
+      const formData = new FormData();
+      formData.append('file', e.target.files[0]);
+      
+      try {
+          const token = localStorage.getItem("accessToken");
+          const res = await fetch(`${API_URL}/files/upload`, {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${token}` },
+              body: formData
+          });
+          const data = await res.json();
+          setInputValue(data.url);
+      } catch (err) {
+          alert("Ошибка загрузки файла");
+      } finally {
+          setUploading(false);
+      }
+  };
+
+  // Drag and Drop handlers
+  const handleDrag = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      // Вызываем тот же обработчик, что и для input
+      handleFileUpload({ target: { files: e.dataTransfer.files } } as any);
+    }
+  }, []);
+
   return (
     <div
       className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
@@ -64089,25 +66105,70 @@ export default function QuestDetailModal({ quest, onClose }: Props) {
           <button onClick={onClose}>&times;</button>
         </div>
         
-        <div className="prose dark:prose-invert">
+        <div className="prose dark:prose-invert text-sm text-zinc-600 dark:text-zinc-300 mb-4">
             {quest.description}
         </div>
 
-        {/* Simple input for MVP - text only for now to test connectivity */}
+        {/* Блок комментария от куратора, если есть возврат */}
+        {quest.status === 'CHANGES_REQUESTED' && (
+          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+            <p className="text-xs font-bold text-red-600 dark:text-red-400 mb-1">⚠️ Требуются правки:</p>
+            <p className="text-sm text-red-800 dark:text-red-200">{quest.comment || "Куратор не оставил комментария, но что-то не так."}</p>
+          </div>
+        )}
+
+        {/* Динамический инпут */}
         <div className="mt-4">
+          {quest.submission_type === 'file' ? (
+            <div 
+              className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-colors ${
+                dragActive 
+                  ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" 
+                  : "border-zinc-300 dark:border-zinc-700 hover:border-zinc-400"
+              }`}
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+            >
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileUpload} 
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              />
+              
+              {uploading ? (
+                <div className="text-zinc-500 animate-pulse">Загрузка файла...</div>
+              ) : inputValue ? (
+                <div className="flex flex-col items-center">
+                   <div className="text-2xl mb-2">📄</div>
+                   <p className="text-sm font-medium text-green-600 mb-1">Файл загружен</p>
+                   <a href={inputValue} target="_blank" className="text-xs text-blue-500 hover:underline z-10 relative">Посмотреть</a>
+                   <p className="text-xs text-zinc-400 mt-2">Нажмите или перетащите, чтобы заменить</p>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center text-zinc-500">
+                  <div className="text-2xl mb-2">☁️</div>
+                  <p className="text-sm">Перетащите файл сюда или нажмите для выбора</p>
+                </div>
+              )}
+            </div>
+          ) : (
             <textarea 
-                className="w-full bg-zinc-100 dark:bg-zinc-800 p-2 rounded"
-                placeholder="Введите ответ..."
-                value={typeof inputValue === 'string' ? inputValue : JSON.stringify(inputValue)}
-                onChange={e => setInputValue(e.target.value)}
-                disabled={quest.status === 'DONE'}
+              className="w-full bg-zinc-50 dark:bg-zinc-800 p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 focus:ring-2 focus:ring-blue-500 outline-none transition"
+              placeholder="Введите ответ..."
+              value={typeof inputValue === 'string' ? inputValue : JSON.stringify(inputValue)}
+              onChange={e => setInputValue(e.target.value)}
+              disabled={quest.status === 'DONE'}
             />
+          )}
         </div>
 
         <div className="flex items-center gap-3 mt-4">
             <button
               onClick={handleSubmit}
-              disabled={quest.status === 'DONE'}
+              disabled={quest.status === 'DONE' || uploading}
               className="btn btn-primary"
             >
               {quest.status === 'DONE' ? 'Выполнено' : 'Отправить'}
@@ -64502,7 +66563,7 @@ export default eslintConfig;
 --- BEGIN FILE: apps/web/next-env.d.ts ---
 /// <reference types="next" />
 /// <reference types="next/image-types/global" />
-import "./.next/types/routes.d.ts";
+import "./.next/dev/types/routes.d.ts";
 
 // NOTE: This file should not be edited
 // see https://nextjs.org/docs/app/api-reference/config/typescript for more information.
@@ -64524,7 +66585,7 @@ export default nextConfig;
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 3000",
+    "dev": "next dev -H 0.0.0.0 --port 3000",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
@@ -64656,12 +66717,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     const data = await res.json();
     localStorage.setItem("accessToken", data.accessToken);
     await fetchProfile(data.accessToken);
-
-    if (data.user.role === "student") {
-      router.replace("/student/dashboard");
-    } else {
-      router.replace("/curator/dashboard");
-    }
+    // Редирект теперь обрабатывается в useEffect на странице логина
   };
 
   const register = async (data: any) => {
@@ -64680,12 +66736,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       const loginData = await res.json();
       localStorage.setItem("accessToken", loginData.accessToken);
       await fetchProfile(loginData.accessToken);
-
-      if (loginData.user.role === "student") {
-        router.replace("/student/dashboard");
-      } else {
-        router.replace("/curator/dashboard");
-      }
+      // Редирект теперь обрабатывается в useEffect на странице логина
   };
 
   const logout = () => {
@@ -64705,6 +66756,64 @@ export const useAuth = () => {
   return ctx;
 };
 --- END FILE: apps/web/shared/AuthContext.tsx ---
+
+--- BEGIN FILE: apps/web/shared/Avatar.tsx ---
+import { useMemo } from "react";
+
+type Props = {
+  name: string;
+  level: number;
+  className?: string;
+};
+
+export default function Avatar({ name, level, className = "w-16 h-16" }: Props) {
+  // Генерируем стабильные цвета на основе имени
+  const colors = useMemo(() => {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const hue = Math.abs(hash % 360);
+    return {
+      bg: `hsl(${hue}, 70%, 85%)`,
+      text: `hsl(${hue}, 80%, 30%)`,
+      accent: `hsl(${(hue + 45) % 360}, 80%, 60%)`
+    };
+  }, [name]);
+
+  return (
+    <div className={`relative rounded-full flex items-center justify-center font-bold shadow-inner ${className}`} style={{ backgroundColor: colors.bg, color: colors.text }}>
+      <div className="z-10 text-xl">
+        {name[0]?.toUpperCase()}
+      </div>
+      
+      {/* Декоративное кольцо уровня */}
+      <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 36 36">
+        <path
+          className="text-white/40"
+          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3"
+        />
+        <path
+          style={{ color: colors.accent }}
+          strokeDasharray={`${Math.min(level * 10, 100)}, 100`}
+          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3"
+        />
+      </svg>
+      
+      {/* Бейдж уровня */}
+      <div className="absolute -bottom-1 -right-1 bg-black text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full border-2 border-white dark:border-zinc-900">
+        {level}
+      </div>
+    </div>
+  );
+}
+--- END FILE: apps/web/shared/Avatar.tsx ---
 
 --- BEGIN FILE: apps/web/shared/Calendar.tsx ---
 "use client";
@@ -64818,7 +66927,7 @@ export type QuestTemplate = {
   id: number;
   stage: string;
   title: string;
-  xp: number;
+  xpReward: number; // Renamed from xp
   description: string;
   deadline: string;
   links_to_document_id: number | null;
@@ -64836,11 +66945,13 @@ export type University = {
   name: string;
   logo_url: string;
   program_ids: number[];
+  countryId: string;
 };
 
 export type Program = {
   id: number;
   title: string;
+  category?: string; // <--- Добавлено поле
   university_id: string;
   deadline: string;
   link: string;
@@ -64877,36 +66988,63 @@ function readOverrides(): CountryProfile[] | null {
 export const CountryProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
   const { user } = useAuth();
   const [countries, setCountries] = useState<CountryProfile[]>([]);
+  const [universities, setUniversities] = useState<University[]>([]);
+  const [quests, setQuests] = useState<QuestTemplate[]>([]);
   const [selectedCountryId, setSelectedCountryIdState] = useState<string>("");
 
+  const refreshData = async () => {
+      const token = localStorage.getItem("accessToken");
+      // Явно указываем тип, чтобы TS не ругался на несовместимость с HeadersInit
+      const headers: Record<string, string> = {};
+      if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      try {
+        const [resC, resU, resQ] = await Promise.all([
+            fetch(`${API_URL}/countries`, { headers }),
+            fetch(`${API_URL}/admin/universities`, { headers }),
+            fetch(`${API_URL}/admin/task-templates`, { headers })
+        ]);
+
+        if (resC.ok) {
+             const cData = await resC.json();
+             setCountries(cData.map((c: any) => ({
+                 id: c.id, name: c.name, flag_icon: c.flagIcon,
+                 required_document_ids: [], required_quest_ids: [] 
+             })));
+        }
+        if (resU.ok) {
+            const uData = await resU.json();
+            setUniversities(uData.map((u: any) => ({
+                id: u.id, name: u.name, logo_url: u.logoUrl || '🎓', program_ids: [], countryId: u.countryId
+            })));
+        }
+        if (resQ.ok) {
+            const qData = await resQ.json();
+            setQuests(qData);
+        }
+      } catch (e) {
+          console.error("Failed to load data", e);
+      }
+  };
+
   useEffect(() => {
-      // Fetch countries from API
-      fetch(`${API_URL}/countries`)
-        .then(r => r.json())
-        .then(data => {
-            // Map API response to CountryProfile format if needed
-            const mapped = data.map((c: any) => ({
-                id: c.id,
-                name: c.name,
-                flag_icon: c.flagIcon,
-                required_document_ids: c.requiredDocumentIds || [],
-                required_quest_ids: c.requiredQuestIds || []
-            }));
-            setCountries(mapped);
-            
-            // Set default country from User profile if available
-            if (user?.countryId) {
-                setSelectedCountryIdState(user.countryId);
-            } else if (mapped.length > 0) {
-                setSelectedCountryIdState(mapped[0].id);
-            }
-        })
-        .catch(console.error);
+      refreshData();
   }, [user]);
+
+  useEffect(() => {
+      if (countries.length > 0 && !selectedCountryId) {
+          if (user?.countryId) {
+              setSelectedCountryIdState(user.countryId);
+          } else {
+              setSelectedCountryIdState(countries[0].id);
+          }
+      }
+  }, [countries, user]);
 
   const setSelectedCountryId = (id: string) => {
     setSelectedCountryIdState(id);
-    if (typeof window !== "undefined") localStorage.setItem("selectedCountryId", id);
   };
 
   const selectedCountry = useMemo(
@@ -64914,15 +67052,17 @@ export const CountryProvider: React.FC<React.PropsWithChildren> = ({ children })
     [countries, selectedCountryId]
   );
 
-  const value: Ctx = {
+  // Используем any для расширения типа контекста в рантайме, либо нужно обновить тип Ctx выше
+  const value: any = {
     countries,
     selectedCountryId,
     setSelectedCountryId,
     selectedCountry,
-    quests: questTemplates as QuestTemplate[],
+    quests, // Теперь динамические квесты
     documents: docTemplates as DocumentTemplate[],
-    universities: universityTemplates as University[],
+    universities, // Теперь динамические вузы
     programs: programTemplates as Program[],
+    refreshData, // Экспортируем функцию обновления
   };
 
   return <CountryCtx.Provider value={value}>{children}</CountryCtx.Provider>;
@@ -65199,6 +67339,7 @@ export const useProgress = () => {
 
 --- BEGIN FILE: apps/web/shared/Sidebar.tsx ---
 "use client";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "./AuthContext";
@@ -65222,9 +67363,22 @@ const NavItem = ({ href, label }: { href: string; label: string }) => {
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <aside className="w-full sm-w-64 shrink-0">
+    <>
+    {/* Mobile Toggle */}
+    <button 
+      className="sm:hidden fixed bottom-4 right-4 z-50 bg-black text-white p-3 rounded-full shadow-lg"
+      onClick={() => setMobileOpen(!mobileOpen)}
+    >
+      {mobileOpen ? "✕" : "☰"}
+    </button>
+
+    <aside className={`
+      fixed inset-y-0 left-0 z-40 w-64 bg-zinc-50 dark:bg-black p-4 transform transition-transform duration-200 ease-in-out sm:relative sm:translate-x-0 sm:w-full
+      ${mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"}
+    `}>
       {user?.role === "student" && (
         <div className="card p-4">
           <div className="flex items-center justify-between mb-2">
@@ -65251,11 +67405,10 @@ export default function Sidebar() {
           {(user?.role === "curator" || user?.role === "admin") && (
             <>
               {/* --- ИЗМЕНЕНИЕ: Ссылка "Студенты" переименована в "Панель Студентов" --- */}
-              <NavItem href="/curator/students" label="Панель Студентов" />
-              {/* --- НОВОЕ: Ссылка на Календарь для куратора --- */}
-              <NavItem href="/curator/calendar" label="Календарь" />
-              <NavItem href="/curator/review" label="Ревью Задач" />
-              <NavItem href="/curator/admin/countries" label="Конфигуратор Стран" />
+              <NavItem href="/curator/admin/moderators" label="Кураторы" />
+              <NavItem href="/curator/students" label="Студенты" />
+              <NavItem href="/curator/admin/countries" label="Страны и программы" />
+              <NavItem href="/curator/programs-search" label="Поиск программ" />
             </>
           )}
         </nav>
@@ -65263,6 +67416,12 @@ export default function Sidebar() {
         <button onClick={logout} className="block w-full text-left px-4 py-2 rounded-xl transition hover:bg-black/5 dark:hover:bg-white/10">Выйти</button>
       </div>
     </aside>
+    
+    {/* Overlay for mobile */}
+    {mobileOpen && (
+      <div className="fixed inset-0 z-30 bg-black/50 sm:hidden" onClick={() => setMobileOpen(false)} />
+    )}
+    </>
   );
 }
 --- END FILE: apps/web/shared/Sidebar.tsx ---
@@ -65325,7 +67484,11 @@ test.describe('Authentication Flow', () => {
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -65343,7 +67506,9 @@ test.describe('Authentication Flow', () => {
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": [
+        "./*"
+      ]
     }
   },
   "include": [
@@ -65353,11 +67518,34 @@ test.describe('Authentication Flow', () => {
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts",
-    "mock/**/*.json"
+    "mock/**/*.json",
+    ".next/dev/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules"
+  ]
 }
 --- END FILE: apps/web/tsconfig.json ---
+
+--- BEGIN FILE: docker-compose.override.yml ---
+version: "3.9"
+
+services:
+  api:
+    command: npm run start:dev
+    volumes:
+      - ./apps/api/src:/app/apps/api/src
+      - ./apps/api/tsconfig.json:/app/apps/api/tsconfig.json
+
+  web:
+    command: npm run dev
+    environment:
+      - WATCHPACK_POLLING=true
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+      - /app/.next
+--- END FILE: docker-compose.override.yml ---
 
 --- BEGIN FILE: docker-compose.yml ---
 version: "3.9"
@@ -65383,6 +67571,19 @@ services:
     ports:
       - "8080:8080"
 
+  minio:
+    image: minio/minio
+    container_name: abbit-minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+
   api:
     build:
       context: .
@@ -65393,9 +67594,15 @@ services:
       - CAMUNDA_URL=http://camunda:8080/engine-rest
       - CAMUNDA_REG_PROCESS_KEY=student_registration
       - DATABASE_URL=postgresql://postgres:postgres@abbit-db:5432/abbit?schema=public
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET=abbit-files
     depends_on:
       - camunda
       - abbit-db
+      - minio
     ports:
       - "4000:4000"
 
@@ -65414,6 +67621,7 @@ services:
 
 volumes:
   postgres_data:
+  minio_data:
 --- END FILE: docker-compose.yml ---
 
 --- BEGIN FILE: next-env.d.ts ---

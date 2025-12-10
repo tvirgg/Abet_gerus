@@ -38,11 +38,13 @@ export type University = {
   name: string;
   logo_url: string;
   program_ids: number[];
+  countryId: string;
 };
 
 export type Program = {
   id: number;
   title: string;
+  category?: string; // <--- Добавлено поле
   university_id: string;
   deadline: string;
   link: string;

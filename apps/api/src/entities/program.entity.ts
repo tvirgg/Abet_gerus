@@ -13,6 +13,10 @@ export class Program {
   @JoinColumn({ name: 'universityId' })
   university!: University;
 
+// --- НОВОЕ ПОЛЕ ---
+  @Column({ nullable: true })
+  category?: string; // 'IT', 'Engineering', 'Business', 'Arts', etc.
+
   @Column()
   title!: string;
 

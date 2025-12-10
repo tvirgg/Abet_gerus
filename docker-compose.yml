@@ -21,6 +21,19 @@ services:
     ports:
       - "8080:8080"
 
+  minio:
+    image: minio/minio
+    container_name: abbit-minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+
   api:
     build:
       context: .
@@ -31,9 +44,15 @@ services:
       - CAMUNDA_URL=http://camunda:8080/engine-rest
       - CAMUNDA_REG_PROCESS_KEY=student_registration
       - DATABASE_URL=postgresql://postgres:postgres@abbit-db:5432/abbit?schema=public
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET=abbit-files
     depends_on:
       - camunda
       - abbit-db
+      - minio
     ports:
       - "4000:4000"
 
@@ -52,3 +71,4 @@ services:
 
 volumes:
   postgres_data:
+  minio_data:

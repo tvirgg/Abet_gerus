@@ -4,15 +4,16 @@ import { useCountry } from "@/shared/CountryContext";
 import { useProgress } from "@/shared/ProgressContext";
 import Link from "next/link";
 import { useMemo } from "react";
+import Avatar from "@/shared/Avatar";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const { selectedCountry, quests } = useCountry(); // documents не используется здесь напрямую
   const { tasks } = useProgress(); // Используем tasks вместо progress
 
-  const { totalQuests, completedQuests, progressPercentage, totalXp } = useMemo(() => {
+  const { totalQuests, completedQuests, progressPercentage, totalXp, level } = useMemo(() => {
     if (!selectedCountry) {
-      return { totalQuests: 0, completedQuests: 0, progressPercentage: 0, totalXp: 0 };
+      return { totalQuests: 0, completedQuests: 0, progressPercentage: 0, totalXp: 0, level: 1 };
     }
 
     // 1. Определяем ID и Заголовки обязательных квестов для выбранной страны
@@ -36,12 +37,16 @@ export default function Dashboard() {
 
     // 4. Считаем XP (берем награду из выполненных задач)
     const xp = relevantCompletedTasks.reduce((sum, t) => sum + (t.xpReward || 0), 0);
+    
+    // Уровень: каждые 200 XP
+    const level = Math.floor(xp / 200) + 1;
 
     return {
       totalQuests: requiredQuestIds.size,
       completedQuests: relevantCompletedTasks.length,
       progressPercentage: progressValue,
       totalXp: xp,
+      level
     };
   }, [selectedCountry, tasks, quests]);
 
@@ -54,9 +59,11 @@ export default function Dashboard() {
 
       <div className="grid sm:grid-cols-[1fr_2fr] gap-6 mb-6">
         <div className="card p-4 flex flex-col items-center text-center">
-          <div className="text-5xl mb-2">🎓</div>
+          <div className="mb-3">
+             <Avatar name={user?.name || "Student"} level={level} className="w-20 h-20 text-3xl" />
+          </div>
           <div className="font-semibold">{user?.name}</div>
-          <div className="text-sm text-zinc-500">Уровень 1</div>
+          <div className="text-sm text-zinc-500">Уровень {level}</div>
           <div className="mt-2 text-lg font-bold text-yellow-500">{totalXp} XP</div>
         </div>
         <div className="card p-4">
