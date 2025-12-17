@@ -124,4 +124,11 @@ export class TasksService {
           await this.syncStudentTasks(student.id);
       }
   }
+
+  async findAllForStudentEntity(studentId: string) {
+    return this.taskRepo.find({
+      where: { studentId },
+      order: { id: 'ASC' }
+    });
+  }
 }

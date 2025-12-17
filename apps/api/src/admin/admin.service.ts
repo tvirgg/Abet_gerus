@@ -36,7 +36,6 @@ export class AdminService {
     @InjectRepository(Program) private programRepo: Repository<Program>,
   ) {}
 
-  // ... (методы getModerators, createModerator, updateModerator, getStudents остаются без изменений)
   async getModerators() {
     const curators = await this.userRepo.find({
       where: { role: Role.CURATOR },
@@ -49,7 +48,7 @@ export class AdminService {
 
   async getStudents() {
     const students = await this.studentRepo.find({
-      relations: ['user', 'curator'], // <-- Грузим связь с куратором
+      relations: ['user', 'curator'], 
       order: { fullName: 'ASC' }
     });
     
@@ -61,25 +60,116 @@ export class AdminService {
       userId: s.userId,
       email: s.user?.email,
       isActive: s.user?.isActive,
-      // --- НОВЫЕ ПОЛЯ ---
       curatorId: s.curatorId,
       curatorName: s.curator?.fullName
     }));
   }
 
-  // --- НОВЫЙ МЕТОД ---
+  // --- ИСПРАВЛЕНО: Реальная логика создания куратора ---
+  async createModerator(data: any) {
+    const company = await this.companyRepo.findOne({ where: {} });
+    if (!company) throw new Error("Company not found");
+
+    // Проверяем, существует ли пользователь с таким email
+    const existing = await this.userRepo.findOne({ where: { email: data.email } });
+    if (existing) {
+        throw new BadRequestException("User with this email already exists");
+    }
+
+    // Генерируем пароль, если не передан
+    const password = data.password || Math.random().toString(36).slice(-8);
+    
+    // 1. Создаем User
+    const user = this.userRepo.create({
+      email: data.email,
+      passwordHash: hashPassword(password),
+      role: Role.CURATOR,
+      companyId: company.id,
+      isActive: true
+    });
+    const savedUser = await this.userRepo.save(user);
+
+    // 2. Создаем профиль Curator
+    const curator = this.curatorRepo.create({
+      userId: savedUser.id,
+      companyId: company.id,
+      fullName: data.fullName,
+      specialization: data.specialization,
+      bio: data.bio,
+      avatarUrl: data.avatarUrl
+    });
+    await this.curatorRepo.save(curator);
+
+    // Возвращаем объект юзера и сгенерированный пароль (чтобы показать его админу)
+    return { ...savedUser, generatedPassword: data.password ? null : password };
+  }
+
+  // --- ИСПРАВЛЕНО: Реальная логика обновления куратора ---
+  async updateModerator(id: string, data: any) {
+    const user = await this.userRepo.findOne({ where: { id }, relations: ['curator'] });
+    if (!user) throw new NotFoundException("Moderator not found");
+
+    if (data.email) user.email = data.email;
+    if (data.isActive !== undefined) user.isActive = data.isActive;
+    // Если пришел пароль - обновляем хеш
+    if (data.password) user.passwordHash = hashPassword(data.password);
+    
+    await this.userRepo.save(user);
+
+    if (user.curator) {
+        if (data.fullName) user.curator.fullName = data.fullName;
+        if (data.specialization) user.curator.specialization = data.specialization;
+        if (data.bio) user.curator.bio = data.bio;
+        if (data.avatarUrl) user.curator.avatarUrl = data.avatarUrl;
+        await this.curatorRepo.save(user.curator);
+    }
+    return user;
+  }
+
+  async createStudent(data: any) {
+    const company = await this.companyRepo.findOne({ where: {} });
+    if (!company) throw new Error("Company not found");
+
+    const existing = await this.userRepo.findOne({ where: { email: data.email } });
+    if (existing) {
+        throw new BadRequestException("User with this email already exists");
+    }
+
+    const password = data.password || "12345678"; 
+
+    const user = this.userRepo.create({
+      email: data.email,
+      passwordHash: hashPassword(password),
+      role: Role.STUDENT,
+      companyId: company.id,
+      isActive: data.isActive !== undefined ? data.isActive : true
+    });
+    const savedUser = await this.userRepo.save(user);
+
+    const student = this.studentRepo.create({
+      userId: savedUser.id,
+      companyId: company.id,
+      fullName: data.fullName,
+      countryId: data.countryId,
+      curatorId: data.curatorId || null,
+      bindingCode: `S-${Math.floor(1000 + Math.random() * 9000)}`,
+      xpTotal: 0
+    });
+    await this.studentRepo.save(student);
+
+    return student;
+  }
+
   async updateStudentAdmin(id: string, data: any) {
       const student = await this.studentRepo.findOne({ where: { id }, relations: ['user'] });
       if (!student) throw new NotFoundException("Student not found");
 
       if (data.fullName) student.fullName = data.fullName;
       if (data.countryId) student.countryId = data.countryId;
-      // Обновление куратора
       if (data.curatorId !== undefined) student.curatorId = data.curatorId;
       
       await this.studentRepo.save(student);
 
-      // Обновление данных юзера (активность/email)
       if (data.email || data.isActive !== undefined) {
           if (data.email) student.user.email = data.email;
           if (data.isActive !== undefined) student.user.isActive = data.isActive;
@@ -88,27 +178,24 @@ export class AdminService {
 
       return student;
   }
+  
+  async resetPassword(userId: string, newPassword?: string) {
+      const user = await this.userRepo.findOneBy({ id: userId });
+      if(!user) throw new NotFoundException("User not found");
+      
+      user.passwordHash = hashPassword(newPassword || "12345678");
+      return this.userRepo.save(user);
+  }
 
-  async createModerator(data: any) { /* ... код из предыдущих файлов ... */ return {}; } // (сокращено для краткости ответа, используйте код из предыдущего контекста)
-  async updateModerator(id: string, data: any) { /* ... код из предыдущих файлов ... */ return {}; }
-  async resetPassword(userId: string, newPassword?: string) { /* ... код из предыдущих файлов ... */ return {}; }
-
-
-  // === Countries & Tasks Logic ===
+  // ... (методы createCountry, getUniversities и др. оставляем как есть) ...
 
   async createCountry(data: Partial<Country>) {
-    // 1. Создаем страну
     const country = await this.countryRepo.save(data);
-
-    // 2. Генерируем стандартные задачи для этой страны
     const tasksToCreate = DEFAULT_COUNTRY_TASKS.map(t => this.taskTplRepo.create({
         ...t,
         countryId: country.id,
-        // companyId берем дефолтный или из контекста, здесь упростим
     }));
-
     await this.taskTplRepo.save(tasksToCreate);
-
     return country;
   }
 
@@ -117,7 +204,6 @@ export class AdminService {
   }
 
   async getUniversities() {
-    // Возвращаем университеты вместе с программами для удобства фронтенда
     return this.uniRepo.find({ 
         relations: ['country', 'programs'],
         order: { name: 'ASC' }
@@ -127,8 +213,6 @@ export class AdminService {
   async createUniversity(data: Partial<University>) {
     return this.uniRepo.save(data);
   }
-
-  // === Task Templates ===
 
   async getTaskTemplates() {
     return this.taskTplRepo.find({ order: { id: 'ASC' } });
@@ -141,8 +225,6 @@ export class AdminService {
   async deleteTaskTemplate(id: number) {
       return this.taskTplRepo.delete(id);
   }
-  
-  // === Programs Logic ===
   
   async searchPrograms(query: { countryId?: string; universityId?: string; category?: string; search?: string }) {
     const qb = this.programRepo.createQueryBuilder('program')
@@ -158,7 +240,6 @@ export class AdminService {
   }
 
   async createProgram(data: Partial<Program>) {
-    // При создании программы можно также добавить специфичные задачи, если нужно
     return this.programRepo.save(data);
   }
 

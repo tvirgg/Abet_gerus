@@ -51,6 +51,7 @@ export default function ModeratorsPage() {
         // Removed mock enrichment, data comes from backend
         setModerators(data.curators);
         setStudents(data.students);
+        // Если ничего не выбрано, выбираем первого
         if (!selectedModeratorId && data.curators.length > 0) setSelectedModeratorId(data.curators[0].id);
       }
     } catch (e) { console.error(e); } finally { setLoading(false); }
@@ -130,9 +131,12 @@ export default function ModeratorsPage() {
               body: JSON.stringify(data)
           });
       }
+      
       if (res.ok) {
-          await fetchModerators();
-          return await res.json(); // Возвращаем данные (там пароль при создании)
+          const result = await res.json();
+          // ВАЖНО: Обновляем список модераторов после успешного сохранения
+          await fetchModerators(); 
+          return result; 
       } else {
           throw new Error("Failed");
       }
@@ -170,8 +174,12 @@ export default function ModeratorsPage() {
                       : "hover:bg-zinc-100 dark:hover:bg-zinc-800/50"
                   }`}
                 >
-                  <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xs font-bold text-zinc-600 dark:text-zinc-300">
-                    {mod.curator?.fullName?.[0]?.toUpperCase() || mod.email[0]?.toUpperCase()}
+                  <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xs font-bold text-zinc-600 dark:text-zinc-300 overflow-hidden">
+                    {mod.curator?.avatarUrl ? (
+                         <img src={mod.curator.avatarUrl} className="w-full h-full object-cover" />
+                    ) : (
+                        mod.curator?.fullName?.[0]?.toUpperCase() || mod.email[0]?.toUpperCase()
+                    )}
                   </div>
                   <div className="overflow-hidden">
                     <div className="font-medium text-sm truncate">{mod.curator?.fullName || mod.email}</div>
@@ -197,7 +205,7 @@ export default function ModeratorsPage() {
             <div className="card p-6">
               <div className="flex justify-between items-start mb-6">
                 <div className="flex gap-4 items-center">
-                  <div className="w-16 h-16 rounded-full overflow-hidden">
+                  <div className="w-16 h-16 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center">
                     {activeMod.curator?.avatarUrl ? (
                       <img 
                         src={activeMod.curator.avatarUrl} 
@@ -205,7 +213,7 @@ export default function ModeratorsPage() {
                         className="w-full h-full object-cover" 
                       />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-2xl text-white font-bold">
+                      <div className="text-2xl text-zinc-500 font-bold">
                         {activeMod.curator?.fullName?.[0]?.toUpperCase() || activeMod.email[0]?.toUpperCase()}
                       </div>
                     )}
@@ -289,6 +297,11 @@ export default function ModeratorsPage() {
                                             </tr>
                                          )
                                     })}
+                                    {linkedStudents.length === 0 && (
+                                        <tr>
+                                            <td colSpan={2} className="text-center py-4 text-zinc-500">Нет привязанных студентов</td>
+                                        </tr>
+                                    )}
                                 </tbody>
                             </table>
                          </div>

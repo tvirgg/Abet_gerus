@@ -90,7 +90,7 @@ export default function StudentModal({ student, onClose, onSave }: Props) {
       email,
       countryId,
       isActive,
-      curatorId: curatorId || null as any, // отправляем null если пусто
+      curatorId: curatorId === "" ? undefined : curatorId,
     };
     
     if (isEdit) {

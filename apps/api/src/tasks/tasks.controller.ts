@@ -34,6 +34,11 @@ export class TasksController {
     return this.tasksService.requestChanges(id, body.comment);
   }
 
+  @Get("curator/students/:studentId/tasks")
+  getStudentTasks(@Param("studentId") studentId: string) {
+    return this.tasksService.findAllForStudentEntity(studentId);
+  }
+
   // --- ИСПРАВЛЕНИЕ ЗДЕСЬ ---
   @Post("debug/generate")
   generate(@Request() req: any) {

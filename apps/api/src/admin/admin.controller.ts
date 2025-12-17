@@ -84,6 +84,11 @@ export class AdminController {
     return this.adminService.getStudents();
   }
 
+  @Post("students")
+  createStudent(@Body() dto: any) {
+    return this.adminService.createStudent(dto);
+  }
+
   @Patch("students/:id")
   updateStudent(@Param("id") id: string, @Body() body: any) {
     // В AdminService нужно убедиться, что метод называется updateStudentAdmin (как мы сделали выше)
