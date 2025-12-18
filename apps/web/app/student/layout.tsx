@@ -1,6 +1,7 @@
 "use client";
 import { useAuth } from "@/shared/AuthContext";
 import Sidebar from "@/shared/Sidebar";
+import Navbar from "@/shared/Navbar";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
@@ -21,7 +22,10 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
       <div className="container py-6">
         <div className="grid grid-cols-1 sm:grid-cols-[16rem_1fr] gap-6">
           <Sidebar />
-          <main className="card p-4">{children}</main>
+          <div className="flex flex-col min-w-0">
+             <Navbar />
+             <main className="card p-4 flex-1">{children}</main>
+          </div>
         </div>
       </div>
     </div>

@@ -1,10 +1,11 @@
 "use client";
 import { useEffect, useState, useMemo } from "react";
 import { useCountry, Program } from "../../../../shared/CountryContext";
-import QuestEditor from "./QuestEditor";
 import ProgramEditModal from "./ProgramEditModal";
 import UniversityAccordion from "./UniversityAccordion";
-import ProgramDetailModal from "./ProgramDetailModal";
+// import ProgramDetailModal from "./ProgramDetailModal"; // Больше не нужен
+import CountryDetailPanel from "./CountryDetailPanel";
+import ProgramDetailPanel from "./ProgramDetailPanel"; // <--- Импортируем новый компонент
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
 
@@ -18,18 +19,30 @@ export default function ConfiguratorPage() {
   
   // Модальные окна
   const [editingProgram, setEditingProgram] = useState<Program | null>(null);
+  
+  // Вместо модалки для просмотра, используем состояние для панели
   const [viewingProgram, setViewingProgram] = useState<Program | null>(null);
+  
   const [isProgramModalOpen, setIsProgramModalOpen] = useState(false);
   const [activeUniversityIdForCreate, setActiveUniversityIdForCreate] = useState<string | null>(null);
 
-  // Инициализация страны
+  // Инициализация страны (выбираем первую по умолчанию)
   useEffect(() => {
       if (countries.length > 0 && !selectedCountryId) {
           setSelectedCountryId(countries[0].id);
       }
   }, [countries]);
 
-  // Загрузка программ при смене страны (загружаем все программы этой страны сразу для оптимизации UI)
+  // При смене страны сбрасываем выбранную программу
+  useEffect(() => {
+      setViewingProgram(null);
+  }, [selectedCountryId]);
+
+  const activeCountry = useMemo(() => 
+    countries.find(c => c.id === selectedCountryId), 
+  [countries, selectedCountryId]);
+
+  // Загрузка программ
   useEffect(() => {
       if (selectedCountryId) {
           setLoadingPrograms(true);
@@ -47,23 +60,11 @@ export default function ConfiguratorPage() {
       }
   }, [selectedCountryId]);
 
-  // Фильтруем университеты текущей страны
   const filteredUniversities = useMemo(() => {
       return universities.filter((u: any) => u.countryId === selectedCountryId);
   }, [universities, selectedCountryId]);
-  
-  // Профиль задач для страны (для редактора задач)
-  const currentProfile = useMemo(() => {
-      const assignedQuests = quests.filter((q: any) => q.countryId === selectedCountryId);
-      return {
-          universityId: "country-level",
-          countryId: selectedCountryId || "",
-          assignedQuests
-      };
-  }, [selectedCountryId, quests]);
 
   // --- CRUD Actions ---
-
   const handleSaveProgram = async (data: any) => {
       const token = localStorage.getItem("accessToken");
       const method = data.id ? "PATCH" : "POST";
@@ -76,12 +77,17 @@ export default function ConfiguratorPage() {
       });
       
       if (res.ok) {
-           // Refresh list locally (simplified) or refetch
-           // Refetching is safer
            const resP = await fetch(`${API_URL}/admin/programs/search?countryId=${selectedCountryId}`, {
               headers: { Authorization: `Bearer ${token}` }
            });
-           setPrograms(await resP.json());
+           const updatedPrograms = await resP.json();
+           setPrograms(updatedPrograms);
+           
+           // Если мы редактировали текущую просматриваемую программу, обновим её данные в панели
+           if (viewingProgram && data.id) {
+               const updatedCurrent = updatedPrograms.find((p: any) => p.id === data.id);
+               if (updatedCurrent) setViewingProgram(updatedCurrent);
+           }
       }
   };
 
@@ -90,9 +96,9 @@ export default function ConfiguratorPage() {
        const token = localStorage.getItem("accessToken");
        await fetch(`${API_URL}/admin/programs/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
        setPrograms(prev => prev.filter(p => p.id !== id));
+       if (viewingProgram?.id === id) setViewingProgram(null);
   };
   
-  // Tasks Logic (сохранено с предыдущей версии)
   const saveTaskTemplate = async (task: any) => {
     const token = localStorage.getItem("accessToken");
     const payload = { ...task, countryId: selectedCountryId };
@@ -112,121 +118,115 @@ export default function ConfiguratorPage() {
   };
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-4">
-        <div>
-          <h1 className="text-2xl font-semibold">База знаний</h1>
-          <p className="text-zinc-400 text-sm">Управление странами, вузами и программами.</p>
-        </div>
+    <div className="flex flex-col h-[calc(100vh-6rem)]">
+      <div className="mb-4 shrink-0">
+        <h1 className="text-2xl font-semibold">База знаний</h1>
+        <p className="text-zinc-500 text-sm">Настройка стран, университетов и образовательных треков.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[250px_1fr_350px] gap-6 h-[calc(100vh-12rem)]">
+      <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr_380px] gap-6 flex-1 overflow-hidden">
         
-        {/* Col 1: Страны */}
-        <div className="card p-3 overflow-y-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-          <h2 className="font-semibold px-2 mb-3 text-sm uppercase text-zinc-500">Страны</h2>
-          <ul className="space-y-1">
-            {countries.map((c: any) => (
-              <li key={c.id}>
-                <button
-                  onClick={() => setSelectedCountryId(c.id)}
-                  className={`w-full text-left px-3 py-2 rounded-lg transition text-sm flex items-center gap-2 ${
-                    selectedCountryId === c.id 
-                    ? 'bg-blue-600 text-white shadow-md' 
-                    : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
-                  }`}
-                >
-                  <span className="text-lg">{c.flag_icon}</span> {c.name}
-                </button>
-              </li>
-            ))}
-          </ul>
-          <button className="mt-4 w-full py-2 border border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-zinc-500 hover:border-blue-500 hover:text-blue-500 transition">
-              + Добавить страну
-          </button>
+        {/* Колонка 1: Страны (Сайдбар навигации) */}
+        <div className="card flex flex-col bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+          <div className="p-3 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">
+             <h2 className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Страны</h2>
+          </div>
+          <div className="flex-1 overflow-y-auto p-2">
+            <ul className="space-y-1">
+                {countries.map((c: any) => (
+                <li key={c.id}>
+                    <button
+                    onClick={() => setSelectedCountryId(c.id)}
+                    className={`w-full text-left px-3 py-2.5 rounded-lg transition text-sm flex items-center justify-between group ${
+                        selectedCountryId === c.id 
+                        ? 'bg-blue-600 text-white shadow-md' 
+                        : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
+                    }`}
+                    >
+                        <span className="flex items-center gap-2">
+                            <span className="text-lg leading-none">{c.flag_icon}</span> 
+                            <span className="font-medium">{c.name}</span>
+                        </span>
+                        {selectedCountryId === c.id && <span className="text-xs opacity-70">●</span>}
+                    </button>
+                </li>
+                ))}
+            </ul>
+          </div>
+          <div className="p-2 border-t border-zinc-100 dark:border-zinc-800">
+            <button className="w-full py-2 border border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-zinc-500 hover:border-blue-500 hover:text-blue-500 transition">
+                + Добавить страну
+            </button>
+          </div>
         </div>
 
-        {/* Col 2: Университеты и Программы (Аккордеон) */}
+        {/* Колонка 2: Университеты (Центральная область) */}
         <div className="flex flex-col gap-4 overflow-hidden">
-            <div className="flex justify-between items-center px-1">
-                 <h2 className="font-semibold">Университеты и Программы</h2>
-                 <button className="text-xs bg-zinc-200 dark:bg-zinc-800 px-3 py-1.5 rounded-lg hover:bg-zinc-300 transition">
+            <div className="flex items-center justify-between shrink-0 px-1">
+                 <div>
+                     <h2 className="font-bold text-lg flex items-center gap-2">
+                        {activeCountry?.flag_icon} {activeCountry?.name}
+                        <span className="text-zinc-400 font-normal text-sm">/ Университеты</span>
+                     </h2>
+                 </div>
+                 <button className="text-xs bg-zinc-900 text-white dark:bg-white dark:text-black px-3 py-1.5 rounded-lg hover:opacity-90 transition font-medium">
                      + Добавить ВУЗ
                  </button>
             </div>
             
-            <div className="flex-1 overflow-y-auto pr-2">
+            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
                 {filteredUniversities.length === 0 ? (
-                    <div className="text-center py-10 text-zinc-500">В этой стране пока нет университетов</div>
+                    <div className="h-full flex flex-col items-center justify-center text-zinc-400 bg-zinc-50 dark:bg-zinc-900/30 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800">
+                        <div className="text-3xl mb-2 opacity-50">🏛️</div>
+                        <p>В этой стране пока нет университетов</p>
+                    </div>
                 ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-4 pb-10">
                         {filteredUniversities.map((uni: any) => (
-                            <div key={uni.id} className="relative group">
-                                <UniversityAccordion
-                                    university={uni}
-                                    programs={programs.filter(p => p.university_id === uni.id || (p as any).universityId === uni.id)} // Учитываем разницу в нейминге API/Mock
-                                    onSelectProgram={(p) => setViewingProgram(p)}
-                                    onEditProgram={(p) => { setEditingProgram(p); setActiveUniversityIdForCreate(uni.id); setIsProgramModalOpen(true); }}
-                                    onDeleteProgram={handleDeleteProgram}
-                                />
-                                {/* Кнопка добавления программы, появляется при наведении на группу вуза (можно улучшить UX) */}
-                                <div className="absolute right-14 top-4 opacity-0 group-hover:opacity-100 transition">
-                                    <button 
-                                        onClick={(e) => { 
-                                            e.stopPropagation(); 
-                                            setEditingProgram(null); 
-                                            setActiveUniversityIdForCreate(uni.id); 
-                                            setIsProgramModalOpen(true); 
-                                        }}
-                                        className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-2 py-1 rounded shadow-sm hover:bg-blue-200"
-                                    >
-                                        + Программа
-                                    </button>
-                                </div>
-                            </div>
+                            <UniversityAccordion
+                                key={uni.id}
+                                university={uni}
+                                programs={programs.filter(p => p.university_id === uni.id || (p as any).universityId === uni.id)}
+                                onSelectProgram={(p) => setViewingProgram(p)}
+                                onEditProgram={(p) => { setEditingProgram(p); setActiveUniversityIdForCreate(uni.id); setIsProgramModalOpen(true); }}
+                                onDeleteProgram={handleDeleteProgram}
+                            />
                         ))}
+                        <div className="h-4"></div> {/* Spacer */}
                     </div>
                 )}
             </div>
         </div>
 
-        {/* Col 3: Задачи страны (Беклог) */}
-        <div className="card p-3 overflow-y-auto bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-             <div className="mb-4">
-                 <h2 className="font-semibold text-sm">Беклог задач страны</h2>
-                 <p className="text-xs text-zinc-500">Задачи, применяемые ко всем студентам в {countries.find(c => c.id === selectedCountryId)?.name}</p>
-             </div>
-             
-             <QuestEditor
-                profile={currentProfile}
-                onUpdateProfile={() => {}} 
-                apiSave={saveTaskTemplate}
-                apiDelete={deleteTaskTemplate}
-            />
-        </div>
+        {/* Колонка 3: Детали (Сменная панель: Страна или Программа) */}
+        <div className="h-full overflow-hidden">
+            {viewingProgram ? (
+                <ProgramDetailPanel 
+                    program={viewingProgram}
+                    onClose={() => setViewingProgram(null)}
+                    onEdit={() => {
+                        setEditingProgram(viewingProgram);
+                        setActiveUniversityIdForCreate(viewingProgram.university_id || (viewingProgram as any).universityId);
+                        setIsProgramModalOpen(true);
+                    }}
+                />
+            ) : (
+                <CountryDetailPanel
+                    countryId={selectedCountryId || ""}
+                    onSaveTask={saveTaskTemplate}
+                    onDeleteTask={deleteTaskTemplate}
+                 />
+            )}
+         </div>
       </div>
       
-      {/* Модалка редактирования/создания программы */}
+      {/* Modals */}
       {isProgramModalOpen && activeUniversityIdForCreate && (
         <ProgramEditModal
             program={editingProgram}
             universityId={activeUniversityIdForCreate}
             onSave={handleSaveProgram}
             onClose={() => setIsProgramModalOpen(false)}
-        />
-      )}
-
-      {/* Модалка просмотра программы (карточка) */}
-      {viewingProgram && (
-        <ProgramDetailModal
-            program={viewingProgram}
-            onClose={() => setViewingProgram(null)}
-            onEdit={() => {
-                setEditingProgram(viewingProgram);
-                setActiveUniversityIdForCreate(viewingProgram.university_id || (viewingProgram as any).universityId);
-                setViewingProgram(null);
-                setIsProgramModalOpen(true);
-            }}
         />
       )}
     </div>

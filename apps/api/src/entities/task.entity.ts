@@ -13,7 +13,7 @@ export class Task {
   @Column()
   studentId!: string;
 
-  @ManyToOne(() => Student, (student) => student.tasks)
+  @ManyToOne(() => Student, (student) => student.tasks, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'studentId' })
   student!: Student;
 

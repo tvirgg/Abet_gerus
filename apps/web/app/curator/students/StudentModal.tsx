@@ -9,6 +9,7 @@ export type StudentFull = {
   email: string;
   countryId: string;
   xpTotal: number;
+  password?: string; // <--- Добавили
   isActive: boolean;
   bindingCode: string;
   curatorId?: string; // Новое поле
@@ -19,11 +20,12 @@ type Props = {
   student?: StudentFull | null;
   onClose: () => void;
   onSave: (data: Partial<StudentFull>) => Promise<void>;
+  onDelete?: (id: string) => Promise<void>; // <--- NEW
 };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
 
-export default function StudentModal({ student, onClose, onSave }: Props) {
+export default function StudentModal({ student, onClose, onSave, onDelete }: Props) {
   const { countries } = useCountry();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
@@ -36,6 +38,8 @@ export default function StudentModal({ student, onClose, onSave }: Props) {
 
   const [fullName, setFullName] = useState(student?.fullName || "");
   const [email, setEmail] = useState(student?.email || "");
+  const [password, setPassword] = useState(student?.password || ""); // <--- State для пароля
+  const [showPassword, setShowPassword] = useState(false); // <--- Глаз
   const [countryId, setCountryId] = useState(student?.countryId || countries[0]?.id || "");
   const [isActive, setIsActive] = useState(student?.isActive ?? true);
   const [curatorId, setCuratorId] = useState(student?.curatorId || "");
@@ -64,12 +68,14 @@ export default function StudentModal({ student, onClose, onSave }: Props) {
     if (student) {
       setFullName(student.fullName);
       setEmail(student.email);
-      setCountryId(student.countryId);
+      setPassword(student.password || ""); // <--- Заполняем при редактировании
+      setCountryId(student.countryId || ""); // FIX: Ensure it's not null
       setIsActive(student.isActive ?? true);
       setCuratorId(student.curatorId || "");
     } else {
       setFullName("");
       setEmail("");
+      setPassword(""); // Можно сгенерировать дефолтный: Math.random().toString(36).slice(-8)
       setCountryId(countries[0]?.id || "");
       setIsActive(true);
       // Если создает куратор, ставим его сразу
@@ -84,10 +90,11 @@ export default function StudentModal({ student, onClose, onSave }: Props) {
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setLoading(true);
-    
-    const data: Partial<StudentFull> = {
+     
+    const data: Partial<StudentFull> & { password?: string } = {
       fullName,
       email,
+      password: password || undefined, // Отправляем, только если не пустой (для новых обязателен на бэке)
       countryId,
       isActive,
       curatorId: curatorId === "" ? undefined : curatorId,
@@ -131,16 +138,37 @@ export default function StudentModal({ student, onClose, onSave }: Props) {
                 className={inputClass}
               />
             </div>
-            <div>
-              <label className="block text-xs text-zinc-500 mb-1">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className={inputClass}
-              />
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-zinc-500 mb-1">Email (Логин)</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className={inputClass}
+                  />
+                </div>
+                <div className="relative">
+                   <label className="block text-xs text-zinc-500 mb-1">Пароль</label>
+                   <input
+                     type={showPassword ? "text" : "password"}
+                     value={password}
+                     onChange={(e) => setPassword(e.target.value)}
+                     className={`${inputClass} pr-10 font-mono`} // Added padding-right and font-mono
+                     placeholder={!isEdit ? "Обязательно" : "Пароль скрыт"} // Changed placeholder
+                     required={!isEdit} 
+                   />
+                   <button
+                     type="button"
+                     onClick={() => setShowPassword(!showPassword)}
+                     className="absolute right-3 top-7 text-xs text-zinc-400 hover:text-zinc-600"
+                   >
+                     {showPassword ? "🙈" : "👁️"}
+                   </button>
+                 </div>
             </div>
+
             <div className="grid grid-cols-2 gap-4">
                 <div>
                     <label className="block text-xs text-zinc-500 mb-1">Страна</label>
@@ -185,22 +213,40 @@ export default function StudentModal({ student, onClose, onSave }: Props) {
             </div>
           </div>
           
-          <div className="flex justify-end gap-2 mt-6">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border rounded text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800"
-              disabled={loading}
-            >
-              Отмена
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50"
-              disabled={loading}
-            >
-              {loading ? "Сохранение..." : isEdit ? "Сохранить" : "Создать"}
-            </button>
+          <div className="flex justify-between mt-6">
+            {/* Кнопка удаления (только если редактирование и есть функция) */}
+            {isEdit && student && onDelete ? (
+                <button
+                  type="button"
+                  onClick={async () => {
+                      if(confirm("Удалить студента и все его данные безвозвратно?")) {
+                          await onDelete(student.id);
+                          onClose();
+                      }
+                  }}
+                  className="px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded text-sm"
+                >
+                    Удалить
+                </button>
+            ) : <div></div>}
+
+            <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 border rounded text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                  disabled={loading}
+                >
+                  Отмена
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50"
+                  disabled={loading}
+                >
+                  {loading ? "Сохранение..." : isEdit ? "Сохранить" : "Создать"}
+                </button>
+            </div>
           </div>
         </form>
       </div>

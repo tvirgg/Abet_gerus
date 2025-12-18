@@ -7,9 +7,10 @@ type Props = {
   moderator?: any | null; // Если null - режим создания
   onClose: () => void;
   onSave: (data: any) => Promise<any>;
-};
+  onDelete?: (id: string) => Promise<void>;
+ };
 
-export default function ModeratorModal({ moderator, onClose, onSave }: Props) {
+ export default function ModeratorModal({ moderator, onClose, onSave, onDelete }: Props) {
   const [formData, setFormData] = useState({
       email: "",
       fullName: "",
@@ -17,8 +18,9 @@ export default function ModeratorModal({ moderator, onClose, onSave }: Props) {
       bio: "",
       avatarUrl: "",
       isActive: true,
-      password: "" 
+      password: ""
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [createdPassword, setCreatedPassword] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -32,7 +34,7 @@ export default function ModeratorModal({ moderator, onClose, onSave }: Props) {
           bio: moderator.curator?.bio || "",
           avatarUrl: moderator.curator?.avatarUrl || "",
           isActive: moderator.isActive,
-          password: ""
+          password: moderator.password || "" // <--- Подставляем пароль
       });
     }
   }, [moderator]);
@@ -166,14 +168,23 @@ export default function ModeratorModal({ moderator, onClose, onSave }: Props) {
           </div>
 
            <div>
-            <label className="text-xs text-zinc-400">Пароль {moderator && "(оставьте пустым, чтобы не менять)"}</label>
-            <input
-              type="text"
-              value={formData.password}
-              onChange={(e) => setFormData({...formData, password: e.target.value})}
-              className="w-full mt-1 p-2 rounded-xl bg-zinc-800 border border-zinc-700 text-sm font-mono"
-              placeholder={moderator ? "Новый пароль" : "Оставьте пустым для автогенерации"}
-            />
+            <label className="text-xs text-zinc-400">Пароль</label>
+            <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={formData.password}
+                  onChange={(e) => setFormData({...formData, password: e.target.value})}
+                  className="w-full mt-1 p-2 rounded-xl bg-zinc-800 border border-zinc-700 text-sm font-mono pr-8"
+                  placeholder={moderator ? "Текущий пароль" : "Пароль"}
+                />
+                <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-3 text-zinc-500 hover:text-zinc-300"
+                >
+                    {showPassword ? "🙈" : "👁️"}
+                </button>
+            </div>
           </div>
 
           <div>
@@ -201,13 +212,29 @@ export default function ModeratorModal({ moderator, onClose, onSave }: Props) {
             </div>
           )}
 
-          <div className="flex justify-end gap-2 mt-6">
-            <button type="button" onClick={onClose} className="btn bg-zinc-800 text-zinc-300">
-              Отмена
-            </button>
-            <button type="submit" disabled={isLoading} className="btn btn-primary">
-              {isLoading ? "Сохранение..." : moderator ? "Сохранить" : "Создать"}
-            </button>
+          <div className="flex justify-between items-center mt-6">
+            {moderator && onDelete ? (
+                <button 
+                    type="button"
+                    onClick={async () => {
+                        if(confirm("Удалить куратора безвозвратно?")) {
+                            await onDelete(moderator.id);
+                            onClose();
+                        }
+                    }}
+                    className="btn bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm px-3"
+                >
+                    Удалить
+                </button>
+            ) : <div></div>}
+            <div className="flex gap-2">
+                <button type="button" onClick={onClose} className="btn bg-zinc-200 dark:bg-zinc-800 text-black dark:text-zinc-300">
+                Отмена
+                </button>
+                <button type="submit" disabled={isLoading} className="btn btn-primary">
+                {isLoading ? "Сохранение..." : moderator ? "Сохранить" : "Создать"}
+                </button>
+            </div>
           </div>
         </form>
       </div>

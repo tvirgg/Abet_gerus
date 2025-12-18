@@ -3,8 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "./AuthContext";
-import Notifications from "./Notifications";
-import CountrySwitcher from "./CountrySwitcher";
+
 
 const NavItem = ({ href, label }: { href: string; label: string }) => {
   const path = usePathname();
@@ -22,8 +21,9 @@ const NavItem = ({ href, label }: { href: string; label: string }) => {
 };
 
 export default function Sidebar() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+
 
   return (
     <>
@@ -36,20 +36,18 @@ export default function Sidebar() {
     </button>
 
     <aside className={`
-      fixed inset-y-0 left-0 z-40 w-64 bg-zinc-50 dark:bg-black p-4 transform transition-transform duration-200 ease-in-out sm:relative sm:translate-x-0 sm:w-full
-      ${mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"}
-    `}>
-      {user?.role === "student" && (
-        <div className="card p-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-xs uppercase tracking-wide text-zinc-500">Текущая операция</div>
-            <Notifications />
-          </div>
-          <CountrySwitcher />
-        </div>
-      )}
-      <div className="mt-4 card p-2 space-y-1">
+      fixed inset-y-0 left-0 z-40 w-64 bg-zinc-50 dark:bg-black p-4 transform transition-transform duration-200 ease-in-out sm:relative sm:translate-x-0 sm:w-64 flex flex-col h-screen sm:h-auto
+       ${mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"}
+     `}>
+      {/* Логотип / Название */}
+      <div className="px-4 py-3 mb-4 flex items-center gap-3">
+          <div className="w-8 h-8 bg-black dark:bg-white rounded-lg flex items-center justify-center text-white dark:text-black font-bold">A</div>
+          <span className="font-bold text-lg tracking-tight">Abbit</span>
+      </div>
+
+      <div className="card p-2 space-y-1 flex-1">
         <nav className="space-y-1">
+
           {user?.role === "student" && (
             <>
               <NavItem href="/student/dashboard" label="Главная" />
@@ -72,9 +70,8 @@ export default function Sidebar() {
             </>
           )}
         </nav>
-        <div className="h-px bg-black/5 dark:bg-white/10 my-2 !mt-3 !mb-2" />
-        <button onClick={logout} className="block w-full text-left px-4 py-2 rounded-xl transition hover:bg-black/5 dark:hover:bg-white/10">Выйти</button>
       </div>
+
     </aside>
     
     {/* Overlay for mobile */}

@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { Repository, IsNull, In } from "typeorm";
 import { Country } from "../entities/country.entity";
 import { University } from "../entities/university.entity";
 import { TaskTemplate } from "../entities/task-template.entity";
@@ -11,7 +11,8 @@ import { Curator } from "../entities/curator.entity";
 import { Role } from "../entities/enums";
 import { Program } from "../entities/program.entity";
 
-const hashPassword = (pwd: string) => `hashed_${pwd}`;
+export const hashPassword = (pwd: string) => `hashed_${pwd}`;
+export const unhashPassword = (hash: string) => hash ? hash.replace('hashed_', '') : '';
 
 // Стандартный набор задач для любой новой страны
 const DEFAULT_COUNTRY_TASKS = [
@@ -40,15 +41,21 @@ export class AdminService {
     const curators = await this.userRepo.find({
       where: { role: Role.CURATOR },
       relations: ['curator'], 
-      select: ['id', 'email', 'companyId', 'isActive', 'createdAt']
+      // Добавляем passwordHash в выборку, чтобы его "расшифровать"
+      select: ['id', 'email', 'companyId', 'isActive', 'createdAt', 'passwordHash'] 
     });
     const students = await this.studentRepo.find({ select: ['id', 'fullName', 'countryId', 'xpTotal'] });
-    return { curators, students };
+    
+    // Возвращаем кураторов с "чистым" паролем
+    return { 
+        curators: curators.map(c => ({ ...c, password: unhashPassword(c.passwordHash) })), 
+        students 
+    };
   }
 
   async getStudents() {
     const students = await this.studentRepo.find({
-      relations: ['user', 'curator'], 
+      relations: { user: true, curator: true }, // Explicit object syntax
       order: { fullName: 'ASC' }
     });
     
@@ -58,11 +65,39 @@ export class AdminService {
       countryId: s.countryId,
       xpTotal: s.xpTotal,
       userId: s.userId,
-      email: s.user?.email,
-      isActive: s.user?.isActive,
+      email: s.user?.email || 'No Email',
+      isActive: s.user?.isActive ?? false,
+      password: s.user ? unhashPassword(s.user.passwordHash) : '', // Safe access
       curatorId: s.curatorId,
       curatorName: s.curator?.fullName
     }));
+  }
+
+  async getUnassignedStudents() {
+    return this.studentRepo.find({
+      where: { curatorId: IsNull() },
+      order: { fullName: 'ASC' }
+    });
+  }
+
+  async assignStudentsToCurator(moderatorUserId: string, studentIds: string[]) {
+    // 1. Находим профиль куратора по ID пользователя
+    const curator = await this.curatorRepo.findOne({ where: { userId: moderatorUserId } });
+    if (!curator) {
+      throw new NotFoundException("Curator profile not found for this user");
+    }
+
+    // 2. Обновляем студентов
+    if (studentIds.length > 0) {
+      await this.studentRepo.update(
+        { id: In(studentIds) },
+        { curatorId: curator.id }
+      );
+      
+      // Синхронизируем задачи (опционально, если логика требует пересчета задач при смене куратора, 
+      // но пока задачи привязаны к студенту, так что просто меняем владельца)
+    }
+    return { success: true };
   }
 
   // --- ИСПРАВЛЕНО: Реальная логика создания куратора ---
@@ -126,6 +161,13 @@ export class AdminService {
     return user;
   }
 
+  async deleteModerator(id: string) {
+    const user = await this.userRepo.findOne({ where: { id, role: Role.CURATOR } });
+    if (!user) throw new NotFoundException("Moderator not found");
+    await this.userRepo.remove(user); // Каскадно удалит и Curator профиль
+    return { success: true };
+  }
+
   async createStudent(data: any) {
     const company = await this.companyRepo.findOne({ where: {} });
     if (!company) throw new Error("Company not found");
@@ -177,6 +219,22 @@ export class AdminService {
       }
 
       return student;
+  }
+
+  async deleteStudent(studentId: string) {
+    // 1. Находим студента, чтобы получить ID его пользователя (User)
+    const student = await this.studentRepo.findOne({ where: { id: studentId } });
+    
+    if (!student) {
+        throw new NotFoundException("Student not found");
+    }
+
+    // 2. Удаляем User. 
+    // Благодаря { onDelete: 'CASCADE' } в student.entity.ts, 
+    // база данных сама удалит запись student, а затем и все tasks.
+    await this.userRepo.delete(student.userId);
+
+    return { success: true };
   }
   
   async resetPassword(userId: string, newPassword?: string) {

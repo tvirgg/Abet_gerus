@@ -79,6 +79,21 @@ export class AdminController {
     return this.adminService.updateModerator(id, dto);
   }
 
+  @Delete("moderators/:id")
+  deleteModerator(@Param("id") id: string) {
+    return this.adminService.deleteModerator(id);
+  }
+
+  @Get("students/unassigned")
+  getUnassignedStudents() {
+    return this.adminService.getUnassignedStudents();
+  }
+
+  @Post("moderators/:id/assign-students")
+  assignStudents(@Param("id") id: string, @Body() body: { studentIds: string[] }) {
+    return this.adminService.assignStudentsToCurator(id, body.studentIds);
+  }
+
   @Get("students")
   getStudents() {
     return this.adminService.getStudents();
@@ -93,6 +108,11 @@ export class AdminController {
   updateStudent(@Param("id") id: string, @Body() body: any) {
     // В AdminService нужно убедиться, что метод называется updateStudentAdmin (как мы сделали выше)
     return this.adminService.updateStudentAdmin(id, body);
+  }
+
+  @Delete("students/:id")
+  deleteStudent(@Param("id") id: string) {
+    return this.adminService.deleteStudent(id);
   }
   
   @Patch("users/:id/reset-password")

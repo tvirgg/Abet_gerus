@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { useCountry } from "@/shared/CountryContext";
 import { useAuth } from "@/shared/AuthContext";
 import StudentModal, { StudentFull } from "./StudentModal";
@@ -32,6 +33,7 @@ type CuratorOption = {
 export default function StudentPanelPage() {
   const { countries } = useCountry();
   const { user } = useAuth();
+  const searchParams = useSearchParams();
   
   const [students, setStudents] = useState<StudentFull[]>([]);
   const [curators, setCurators] = useState<CuratorOption[]>([]); // Список кураторов для фильтра
@@ -101,6 +103,16 @@ export default function StudentPanelPage() {
   useEffect(() => {
     if (user) fetchData();
   }, [user]);
+
+  // Эффект для выбора студента из URL
+  useEffect(() => {
+      const targetId = searchParams.get('studentId');
+      if (targetId && students.length > 0) {
+          if (students.find(s => s.id === targetId)) {
+              setSelectedStudentId(targetId);
+          }
+      }
+  }, [searchParams, students]);
 
   // 3. Загрузка задач при выборе студента
   useEffect(() => {
@@ -232,6 +244,24 @@ export default function StudentPanelPage() {
     } else {
         throw new Error("Failed");
     }
+  };
+
+  const handleDeleteStudent = async (id: string) => {
+      const token = localStorage.getItem("accessToken");
+      try {
+          const res = await fetch(`${API_URL}/admin/students/${id}`, {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${token}` }
+          });
+          if (res.ok) {
+              setStudents(prev => prev.filter(s => s.id !== id));
+              if (selectedStudentId === id) setSelectedStudentId(null);
+          } else {
+              alert("Ошибка при удалении");
+          }
+      } catch (e) {
+          console.error(e);
+      }
   };
 
   const handleCreateAdHocTask = async (taskTitle: string) => { 
@@ -456,7 +486,14 @@ export default function StudentPanelPage() {
         )}
       </div>
 
-      {isModalOpen && <StudentModal student={editingStudent} onClose={() => setIsModalOpen(false)} onSave={handleSaveStudent as any} />}
+      {isModalOpen && (
+          <StudentModal 
+              student={editingStudent} 
+              onClose={() => setIsModalOpen(false)} 
+              onSave={handleSaveStudent as any}
+              onDelete={handleDeleteStudent} // <--- передаем функцию
+          />
+      )}
       {selectedTask && <QuestDetailModal quest={selectedTask as any} onClose={() => setSelectedTask(null)} />}
       {isTaskModalOpen && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">

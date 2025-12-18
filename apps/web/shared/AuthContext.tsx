@@ -6,11 +6,13 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
 
 type User = {
   id: string;
+  email: string;
   name: string;
   role: "student" | "curator" | "admin";
   countryId?: string;
   curatorId?: string; // <-- Добавили
 };
+
 
 type AuthContextType = {
   user: User | null;

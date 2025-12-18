@@ -1,7 +1,9 @@
 "use client";
 import { useEffect, useState, useMemo } from "react";
+import Link from "next/link";
 import { useCountry } from "@/shared/CountryContext";
 import ModeratorModal from "./ModeratorModal";
+import BindStudentModal from "./BindStudentModal";
 import Calendar from "@/shared/Calendar";
 import type { CalendarEvent } from "@/shared/Calendar";
 import allQuestsTemplate from "@/mock/quest_templates.json"; // Мок для генерации событий
@@ -13,6 +15,7 @@ type Moderator = {
   id: string;
   email: string;
   isActive: boolean;
+  password?: string; // <--- Добавили
   createdAt: string;
   curator?: { // Data from relation
       fullName: string;
@@ -37,6 +40,7 @@ export default function ModeratorsPage() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  const [isBindModalOpen, setIsBindModalOpen] = useState(false);
   // --- НОВОЕ: Состояние табов ---
   const [activeTab, setActiveTab] = useState<'info' | 'calendar' | 'tasks'>('info');
 
@@ -61,14 +65,15 @@ export default function ModeratorsPage() {
     fetchModerators();
   }, []);
 
+  // Хелпер для получения студентов конкретного модератора (Mock Logic)
+  const getModeratorStudents = (modId: string) => {
+      const modIndex = moderators.findIndex(m => m.id === modId);
+      if (modIndex === -1) return [];
+      return students.filter((s, idx) => idx % moderators.length === modIndex);
+  };
+
   const activeMod = moderators.find(m => m.id === selectedModeratorId);
-  // Временная фильтрация для демо (четные к четным), 
-  // в реале здесь должна быть проверка student.curatorId === activeMod.id
-  const linkedStudents = students.filter((s, idx) => {
-     if (!activeMod) return false;
-     const modIndex = moderators.findIndex(m => m.id === activeMod.id);
-     return idx % moderators.length === modIndex;
-  });
+  const linkedStudents = activeMod ? getModeratorStudents(activeMod.id) : [];
 
   // --- НОВОЕ: Генерация статистики и данных для табов ---
   const moderatorStats = useMemo(() => {
@@ -142,6 +147,22 @@ export default function ModeratorsPage() {
       }
   };
 
+  const handleDeleteModerator = async (id: string) => {
+      const token = localStorage.getItem("accessToken");
+      try {
+          await fetch(`${API_URL}/admin/moderators/${id}`, {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${token}` }
+          });
+          // Убираем из списка и сбрасываем выбор, если удалили активного
+          setModerators(prev => prev.filter(m => m.id !== id));
+          if (selectedModeratorId === id) setSelectedModeratorId(null);
+      } catch (e) {
+          console.error(e);
+          alert("Ошибка удаления");
+      }
+  };
+
   if (loading) return <div className="p-8 text-zinc-500">Загрузка данных...</div>;
 
   return (
@@ -184,13 +205,14 @@ export default function ModeratorsPage() {
                   <div className="overflow-hidden">
                     <div className="font-medium text-sm truncate">{mod.curator?.fullName || mod.email}</div>
                     <div className="text-xs text-zinc-500 truncate">{mod.curator?.specialization || "Куратор"}</div>
-                    {/* Индикатор задач (фейк) */}
-                    {index % 2 === 0 && (
-                        <div className="flex items-center gap-1 mt-1">
-                            <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
-                            <span className="text-[10px] text-zinc-400">Есть задачи</span>
-                        </div>
-                    )}
+                    
+                    {/* Реальный индикатор на основе той же логики, что и в деталях */}
+                    {Math.floor(getModeratorStudents(mod.id).length / 3) > 0 && (
+                         <div className="flex items-center gap-1 mt-1">
+                             <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
+                             <span className="text-[10px] text-zinc-400">Есть задачи</span>
+                         </div>
+                     )}
                   </div>
                 </button>
               </li>
@@ -278,32 +300,39 @@ export default function ModeratorsPage() {
                          <div>
                             <div className="flex justify-between items-center mb-3">
                                 <h3 className="font-semibold text-sm">Список студентов</h3>
-                                <button className="text-xs text-blue-500 hover:underline">+ Привязать</button>
+                                <button 
+                                    onClick={() => setIsBindModalOpen(true)}
+                                    className="text-xs text-blue-500 hover:underline"
+                                >+ Привязать</button>
                             </div>
-                            <table className="w-full text-sm text-left">
-                                <thead className="text-xs text-zinc-500 uppercase bg-zinc-50 dark:bg-zinc-800/50">
-                                    <tr>
-                                    <th className="px-4 py-2 rounded-l-lg">Имя</th>
-                                    <th className="px-4 py-2 text-right rounded-r-lg">Страна</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {linkedStudents.map(s => {
-                                         const country = countries.find((c: any) => c.id === s.countryId);
-                                         return (
-                                            <tr key={s.id} className="border-b border-zinc-100 dark:border-zinc-800">
-                                                <td className="px-4 py-2 font-medium">{s.fullName}</td>
-                                                <td className="px-4 py-2 text-right">{country?.flag_icon}</td>
-                                            </tr>
-                                         )
-                                    })}
-                                    {linkedStudents.length === 0 && (
-                                        <tr>
-                                            <td colSpan={2} className="text-center py-4 text-zinc-500">Нет привязанных студентов</td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
+                            <div className="space-y-2">
+                                {linkedStudents.map(s => {
+                                     const country = countries.find((c: any) => c.id === s.countryId);
+                                     return (
+                                        <Link 
+                                            key={s.id} 
+                                            href={`/curator/students?studentId=${s.id}`}
+                                            className="block p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/50 hover:border-blue-500 hover:shadow-md transition group"
+                                        >
+                                            <div className="flex justify-between items-center">
+                                                <span className="font-medium text-sm text-zinc-800 dark:text-zinc-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{s.fullName}</span>
+                                                <span className="text-lg" title={country?.name}>{country?.flag_icon}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center mt-2">
+                                                <div className="text-[10px] text-zinc-400">XP: <span className="text-zinc-600 dark:text-zinc-300 font-bold">{s.xpTotal}</span></div>
+                                                <div className="text-[10px] text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                                                    Перейти к досье <span>→</span>
+                                                </div>
+                                            </div>
+                                        </Link>
+                                     )
+                                })}
+                                {linkedStudents.length === 0 && (
+                                    <div className="text-center py-6 text-zinc-500 text-sm italic border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl">
+                                        Нет привязанных студентов
+                                    </div>
+                                )}
+                            </div>
                          </div>
                     </div>
                 )}
@@ -346,11 +375,20 @@ export default function ModeratorsPage() {
         )}
       </div>
 
+      {isBindModalOpen && activeMod && (
+        <BindStudentModal 
+            moderatorId={activeMod.id}
+            onClose={() => setIsBindModalOpen(false)}
+            onSuccess={fetchModerators}
+        />
+      )}
+
       {isModalOpen && (
         <ModeratorModal 
             moderator={modalMode === 'edit' ? activeMod : null}
             onClose={() => setIsModalOpen(false)}
             onSave={handleSaveModerator}
+            onDelete={handleDeleteModerator}
         />
       )}
     </div>

@@ -12,7 +12,7 @@ export class Curator {
   @Column()
   userId!: string;
 
-  @OneToOne(() => User, (user) => user.curator)
+  @OneToOne(() => User, (user) => user.curator, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user!: User;
 
