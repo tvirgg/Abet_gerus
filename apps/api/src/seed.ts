@@ -37,13 +37,19 @@ async function seed() {
     // 2. Countries
     const countryRepo = AppDataSource.getRepository(Country);
     const countriesData = [
-        { id: 'at', name: 'Австрия', flagIcon: '🇦🇹' },
-        { id: 'it', name: 'Италия', flagIcon: '🇮🇹' },
-        { id: 'de', name: 'Германия', flagIcon: '🇩🇪' },
-        { id: 'us', name: 'США', flagIcon: '🇺🇸' },
-        { id: 'uk', name: 'Великобритания', flagIcon: '🇬🇧' },
-        { id: 'fr', name: 'Франция', flagIcon: '🇫🇷' },
-        { id: 'nl', name: 'Нидерланды', flagIcon: '🇳🇱' },
+        { 
+            id: 'at', 
+            name: 'Австрия', 
+            flagIcon: '🇦🇹', 
+            // Добавляем дефолтные ID документов (пример)
+            requiredDocumentIds: [101, 102, 201, 202, 203] 
+        },
+        { id: 'it', name: 'Италия', flagIcon: '🇮🇹', requiredDocumentIds: [] },
+        { id: 'de', name: 'Германия', flagIcon: '🇩🇪', requiredDocumentIds: [] },
+        { id: 'us', name: 'США', flagIcon: '🇺🇸', requiredDocumentIds: [] },
+        { id: 'uk', name: 'Великобритания', flagIcon: '🇬🇧', requiredDocumentIds: [] },
+        { id: 'fr', name: 'Франция', flagIcon: '🇫🇷', requiredDocumentIds: [] },
+        { id: 'nl', name: 'Нидерланды', flagIcon: '🇳🇱', requiredDocumentIds: [] },
     ];
 
     for (const c of countriesData) {

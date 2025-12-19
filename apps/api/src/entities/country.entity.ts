@@ -12,6 +12,10 @@ export class Country {
   @Column()
   flagIcon!: string;
 
+  // --- НОВОЕ ПОЛЕ ---
+  @Column('jsonb', { default: [] })
+  requiredDocumentIds!: number[];
+
   @OneToMany(() => University, (uni) => uni.country)
   universities!: University[];
 }

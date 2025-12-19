@@ -104,10 +104,12 @@ export default function QuestEditor({ profile, countryName, flagIcon, apiSave, a
                     </div>
                     
                     <div className="flex items-center gap-3 relative z-10">
+                        <div className="text-zinc-600 text-xs" title={quest.submissionType}>
+                           {quest.submissionType === 'file' ? '📄' : quest.submissionType === 'link' ? '🔗' : quest.submissionType === 'none' ? '☑️' : '📝'}
+                        </div>
                         <div className="text-xs font-bold text-yellow-600 bg-yellow-500/10 border border-yellow-500/20 px-2 py-1 rounded">
                             +{quest.xpReward} XP
-                        </div>
-                        
+                        </div>                        
                         {/* Actions overlay */}
                         <div className="absolute right-0 top-1/2 -translate-y-1/2 flex gap-1 bg-zinc-900 pl-2 opacity-0 group-hover:opacity-100 transition-opacity">
                              <button 
@@ -126,6 +128,7 @@ export default function QuestEditor({ profile, countryName, flagIcon, apiSave, a
                             </button>
                         </div>
                     </div>
+
                 </div>
                 ))}
             </div>

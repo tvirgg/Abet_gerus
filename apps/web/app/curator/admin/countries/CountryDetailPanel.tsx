@@ -3,15 +3,20 @@ import { useState, useMemo } from "react";
 import { useCountry } from "@/shared/CountryContext";
 import QuestEditModal from "./QuestEditModal";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
 type Props = {
   countryId: string;
   onSaveTask: (task: any) => Promise<void>;
   onDeleteTask: (id: number) => Promise<void>;
+  refreshData?: () => Promise<void>; // Добавляем проп для обновления данных
 };
 
-export default function CountryDetailPanel({ countryId, onSaveTask, onDeleteTask }: Props) {
+export default function CountryDetailPanel({ countryId, onSaveTask, onDeleteTask, refreshData }: Props) {
   const { countries, documents, quests } = useCountry();
   const [editingQuest, setEditingQuest] = useState<any | null>(null);
+  const [isEditingDocs, setIsEditingDocs] = useState(false);
+  const [tempRequiredDocs, setTempRequiredDocs] = useState<number[]>([]);
 
   const country = useMemo(() => countries.find(c => c.id === countryId), [countries, countryId]);
 
@@ -26,6 +31,54 @@ export default function CountryDetailPanel({ countryId, onSaveTask, onDeleteTask
      const reqIds = country.required_document_ids || []; 
      return documents.filter(d => reqIds.includes(d.id));
   }, [documents, country]);
+
+  // Инициализация tempRequiredDocs при входе в режим редактирования
+  const enterEditMode = () => {
+    if (country) {
+      setTempRequiredDocs(country.required_document_ids || []);
+    }
+    setIsEditingDocs(true);
+  };
+
+  // Обработка сохранения документов страны
+  const handleSaveCountryDocs = async () => {
+      if (!country) return;
+      const token = localStorage.getItem("accessToken");
+      
+      try {
+          const res = await fetch(`${API_URL}/admin/countries/${country.id}`, {
+              method: "PATCH",
+              headers: { 
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token}` 
+              },
+              body: JSON.stringify({ requiredDocumentIds: tempRequiredDocs })
+          });
+
+          if (!res.ok) throw new Error("Ошибка сохранения");
+          
+          setIsEditingDocs(false);
+          if (refreshData) await refreshData(); // Обновляем данные на клиенте
+      } catch(e) {
+          console.error(e);
+          alert("Не удалось сохранить список документов");
+      }
+  };
+
+  // Exit edit mode
+  const exitEditMode = () => {
+    setIsEditingDocs(false);
+    setTempRequiredDocs([]);
+  };
+
+  // Toggle checkbox
+  const toggleDoc = (docId: number) => {
+    setTempRequiredDocs(prev => 
+      prev.includes(docId) 
+        ? prev.filter(id => id !== docId)
+        : [...prev, docId]
+    );
+  };
 
   const handleCreateNew = () => {
     setEditingQuest({
@@ -103,24 +156,60 @@ export default function CountryDetailPanel({ countryId, onSaveTask, onDeleteTask
               <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-white">
                   <span className="text-blue-500">📄</span> Требования к поступлению
               </h3>
-              {requirements.length > 0 ? (
-                  <div className="grid grid-cols-1 gap-2">
-                      {requirements.map((doc: any) => (
-                          <div key={doc.id} className="p-3 rounded-xl bg-zinc-800/50 border border-zinc-800 text-sm flex items-center gap-3">
-                              <span className="text-green-500 text-xs">●</span>
-                              <span className="text-zinc-300">{doc.title}</span>
-                          </div>
-                      ))}
-                  </div>
+              {!isEditingDocs ? (
+                <>
+                  {requirements.length > 0 ? (
+                      <div className="grid grid-cols-1 gap-2">
+                          {requirements.map((doc: any) => (
+                              <div key={doc.id} className="p-3 rounded-xl bg-zinc-800/50 border border-zinc-800 text-sm flex items-center gap-3">
+                                  <span className="text-green-500 text-xs">●</span>
+                                  <span className="text-zinc-300">{doc.title}</span>
+                              </div>
+                          ))}
+                      </div>
+                  ) : (
+                      <p className="text-sm text-zinc-500 italic p-4 border border-dashed border-zinc-800 rounded-xl text-center">
+                          Список документов не настроен.
+                      </p>
+                  )}
+                  <button 
+                    onClick={enterEditMode}
+                    className="mt-3 text-xs text-blue-500 hover:text-blue-400 transition flex items-center gap-1 font-medium"
+                  >
+                      ✏️ Настроить список документов
+                  </button>
+                </>
               ) : (
-                  <p className="text-sm text-zinc-500 italic p-4 border border-dashed border-zinc-800 rounded-xl text-center">
-                      Список документов не настроен.
-                  </p>
+                <div className="mt-4 pt-4 border-t border-zinc-700">
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {documents.map((doc: any) => (
+                      <label key={doc.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-zinc-800/50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={tempRequiredDocs.includes(doc.id)}
+                          onChange={() => toggleDoc(doc.id)}
+                          className="rounded"
+                        />
+                        <span className="text-sm text-zinc-300">{doc.title}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <div className="flex gap-2 mt-4 pt-4 border-t border-zinc-700">
+                    <button
+                      onClick={handleSaveCountryDocs}
+                      className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition"
+                    >
+                      Сохранить
+                    </button>
+                    <button
+                      onClick={exitEditMode}
+                      className="px-3 py-2 bg-zinc-700 hover:bg-zinc-600 text-zinc-300 rounded-lg text-sm transition"
+                    >
+                      Отмена
+                    </button>
+                  </div>
+                </div>
               )}
-              {/* Кнопка редактирования документов пока заглушкой, можно добавить позже */}
-              <button className="mt-3 text-xs text-blue-500 hover:text-blue-400 transition flex items-center gap-1 font-medium">
-                  ✏️ Настроить список документов
-              </button>
           </div>
 
           {/* Tasks Section (Путь поступления) */}
@@ -138,43 +227,51 @@ export default function CountryDetailPanel({ countryId, onSaveTask, onDeleteTask
                </div>
               
               <div className="space-y-2">
-                  {countryTasks.length > 0 ? countryTasks.map((task: any) => (
-                      <div key={task.id} className="group flex items-center justify-between p-3 rounded-xl border border-zinc-800 bg-zinc-800/30 hover:bg-zinc-800 transition relative overflow-hidden">
-                          <div className="relative z-10">
-                              <div className="text-[10px] text-zinc-500 uppercase font-bold tracking-wide mb-0.5">{task.stage}</div>
-                              <div className="font-medium text-sm text-zinc-200">{task.title}</div>
-                          </div>
-                          
-                          <div className="flex items-center gap-3 relative z-10">
-                              <div className="text-xs font-bold text-yellow-600 bg-yellow-500/10 border border-yellow-500/20 px-2 py-1 rounded">
-                                  +{task.xpReward} XP
-                              </div>
-                              
-                              {/* Hover Actions */}
-                              <div className="absolute right-0 top-1/2 -translate-y-1/2 flex gap-1 bg-zinc-800 pl-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                   {countryTasks.length > 0 ? countryTasks.map((task: any) => (
+                       <div key={task.id} className="group flex items-center justify-between p-3 rounded-xl border border-zinc-800 bg-zinc-800/30 hover:bg-zinc-800 transition relative overflow-hidden">
+                           <div className="relative z-10">
+                               <div className="flex items-center gap-2 mb-0.5">
+                                    <div className="text-[10px] text-zinc-500 uppercase font-bold tracking-wide">{task.stage}</div>
+                                    {task.isCritical && <span className="text-[9px] bg-red-500/20 text-red-500 px-1 rounded border border-red-500/30">Критично</span>}
+                               </div>
+                               <div className="font-medium text-sm text-zinc-200">{task.title}</div>
+                           </div>
+                           
+                           <div className="flex items-center gap-3 relative z-10">
+                               {/* Submission Type Icon */}
+                               <div className="text-zinc-500 text-xs" title={`Тип сдачи: ${task.submissionType}`}>
+                                   {task.submissionType === 'file' ? '📄' : task.submissionType === 'link' ? '🔗' : task.submissionType === 'text' ? '📝' : '☑️'}
+                               </div>
+                               <div className="text-xs font-bold text-yellow-600 bg-yellow-500/10 border border-yellow-500/20 px-2 py-1 rounded">
+                                   +{task.xpReward} XP
+                               </div>
+                               
+                               {/* Hover Actions */}
+                               <div className="absolute right-0 top-1/2 -translate-y-1/2 flex gap-1 bg-zinc-800 pl-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button 
+                                       onClick={() => setEditingQuest(task)} 
+                                       className="p-1.5 hover:bg-zinc-700 rounded text-blue-400"
+                                       title="Редактировать"
+                                   >
+                                       ✏️
+                                   </button>
                                    <button 
-                                      onClick={() => setEditingQuest(task)} 
-                                      className="p-1.5 hover:bg-zinc-700 rounded text-blue-400"
-                                      title="Редактировать"
-                                  >
-                                      ✏️
-                                  </button>
-                                  <button 
-                                      onClick={() => handleRemoveQuest(task.id)} 
-                                      className="p-1.5 hover:bg-zinc-700 rounded text-red-400"
-                                      title="Удалить"
-                                  >
-                                      🗑️
-                                  </button>
-                              </div>
-                          </div>
-                      </div>
-                  )) : (
-                      <div className="text-center py-8 text-zinc-500 text-sm bg-zinc-800/30 rounded-xl border border-dashed border-zinc-800">
-                          Список задач пуст. Добавьте первую задачу.
-                      </div>
-                  )}
+                                       onClick={() => handleRemoveQuest(task.id)} 
+                                       className="p-1.5 hover:bg-zinc-700 rounded text-red-400"
+                                       title="Удалить"
+                                   >
+                                       🗑️
+                                   </button>
+                               </div>
+                           </div>
+                       </div>
+                   )) : (
+                       <div className="text-center py-8 text-zinc-500 text-sm bg-zinc-800/30 rounded-xl border border-dashed border-zinc-800">
+                           Список задач пуст. Добавьте первую задачу.
+                       </div>
+                   )}
               </div>
+
           </div>
       </div>
 

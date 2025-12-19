@@ -25,6 +25,8 @@ export default function ConfiguratorPage() {
   
   const [isProgramModalOpen, setIsProgramModalOpen] = useState(false);
   const [activeUniversityIdForCreate, setActiveUniversityIdForCreate] = useState<string | null>(null);
+  const [isCountryModalOpen, setIsCountryModalOpen] = useState(false); // Для создания страны
+
 
   // Инициализация страны (выбираем первую по умолчанию)
   useEffect(() => {
@@ -117,6 +119,21 @@ export default function ConfiguratorPage() {
     await refreshData();
   };
 
+  // Создание страны
+  const handleCreateCountry = async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      const formData = new FormData(e.currentTarget);
+      const token = localStorage.getItem("accessToken");
+      await fetch(`${API_URL}/admin/countries`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ id: formData.get("id"), name: formData.get("name"), flagIcon: formData.get("flag") })
+      });
+      await refreshData();
+      setIsCountryModalOpen(false);
+  };
+
+
   return (
     <div className="flex flex-col h-[calc(100vh-6rem)]">
       <div className="mb-4 shrink-0">
@@ -154,10 +171,14 @@ export default function ConfiguratorPage() {
             </ul>
           </div>
           <div className="p-2 border-t border-zinc-100 dark:border-zinc-800">
-            <button className="w-full py-2 border border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-zinc-500 hover:border-blue-500 hover:text-blue-500 transition">
+            <button 
+                onClick={() => setIsCountryModalOpen(true)}
+                className="w-full py-2 border border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-zinc-500 hover:border-blue-500 hover:text-blue-500 transition"
+            >
                 + Добавить страну
             </button>
           </div>
+
         </div>
 
         {/* Колонка 2: Университеты (Центральная область) */}
@@ -229,6 +250,34 @@ export default function ConfiguratorPage() {
             onClose={() => setIsProgramModalOpen(false)}
         />
       )}
+
+      {isCountryModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+            <div className="card w-full max-w-sm p-6 bg-zinc-900">
+                <h3 className="text-lg font-bold mb-4">Новая страна</h3>
+                <form onSubmit={handleCreateCountry} className="space-y-3">
+                    <div>
+                        <label className="text-xs text-zinc-500">ID (slug)</label>
+                        <input name="id" required className="w-full p-2 bg-zinc-800 rounded border border-zinc-700" placeholder="e.g. fr" />
+                    </div>
+                    <div>
+                        <label className="text-xs text-zinc-500">Название</label>
+                        <input name="name" required className="w-full p-2 bg-zinc-800 rounded border border-zinc-700" placeholder="France" />
+                    </div>
+                    <div>
+                        <label className="text-xs text-zinc-500">Флаг (Emoji)</label>
+                        <input name="flag" required className="w-full p-2 bg-zinc-800 rounded border border-zinc-700" placeholder="🇫🇷" />
+                    </div>
+                    <div className="flex gap-2 justify-end mt-4">
+                        <button type="button" onClick={() => setIsCountryModalOpen(false)} className="btn text-xs">Отмена</button>
+                        <button type="submit" className="btn btn-primary text-xs">Создать</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+      )}
     </div>
   );
+
+
 }

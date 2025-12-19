@@ -12,6 +12,12 @@ export class AdminController {
     return this.adminService.createCountry(dto);
   }
 
+  // --- НОВЫЙ ЭНДПОИНТ ---
+  @Patch("countries/:id")
+  updateCountry(@Param("id") id: string, @Body() dto: any) {
+    return this.adminService.updateCountry(id, dto);
+  }
+
   @Get("universities")
   getUniversities() {
     return this.adminService.getUniversities();

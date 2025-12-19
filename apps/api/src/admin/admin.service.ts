@@ -309,4 +309,10 @@ export class AdminService {
   async deleteProgram(id: number) {
     return this.programRepo.delete(id);
   }
+
+  // --- НОВЫЙ МЕТОД ---
+  async updateCountry(id: string, data: Partial<Country>) {
+    await this.countryRepo.update(id, data);
+    return this.countryRepo.findOneBy({ id });
+  }
 }

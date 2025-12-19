@@ -22,7 +22,7 @@ export default function ProgramDetailPanel({ program, onClose, onEdit }: Props) 
   // Получаем связанные задачи (логика как в модалке)
   const relatedTasks = useMemo(() => {
     return quests.filter((q: any) => 
-        (university?.countryId && q.countryId === university.countryId) ||
+        (university?.countryId && q.countryId === university?.countryId) ||
         (q.universityId === program.university_id) ||
         (q.programId === program.id)
     );
@@ -128,8 +128,13 @@ export default function ProgramDetailPanel({ program, onClose, onEdit }: Props) 
                               <div className="text-[10px] text-zinc-500 uppercase font-bold tracking-wide mb-0.5">{task.stage}</div>
                               <div className="font-medium text-sm text-zinc-200 truncate pr-2">{task.title}</div>
                           </div>
-                          <div className="text-xs font-bold text-yellow-600 bg-yellow-500/10 border border-yellow-500/20 px-2 py-1 rounded shrink-0">
-                              +{task.xpReward} XP
+                          <div className="flex items-center gap-2">
+                            {task.isCritical && (
+                                <span className="text-[10px] bg-red-500/10 text-red-500 border border-red-500/20 px-1.5 py-0.5 rounded" title="Критическая задача">!</span>
+                            )}
+                            <div className="text-xs font-bold text-yellow-600 bg-yellow-500/10 border border-yellow-500/20 px-2 py-1 rounded shrink-0">
+                                +{task.xpReward} XP
+                            </div>
                           </div>
                       </div>
                   )) : (
