@@ -20,7 +20,8 @@ SNAPSHOT_NAME = "project_snapshot.txt"
 IGNORE_DIR_NAMES = {
     "node_modules", ".next", ".git", ".turbo", ".vercel",
     ".vscode", ".idea", ".cache", ".pnpm-store", "__pycache__",
-    "coverage", "dist", "build", "out"
+    "coverage", "dist", "build", "out",
+    ".bmad", ".agent"
 }
 
 # --- файлы, которые исключаем целиком (lock, временные, секретные) ---
@@ -29,6 +30,7 @@ EXCLUDE_FILENAMES = {
     "package-lock.json", "yarn.lock", "pnpm-lock.yaml", "bun.lockb",
     # env по умолчанию не тянем в снапшот
     ".env", ".env.local", ".env.production", ".env.development",
+    "p.py"
 }
 # шаблоны и типы, которые игнорируем
 IGNORE_GLOBS = {"*.log", "*.tmp", "*.swp", "*.pyc", "*.pyo"}

@@ -1,1 +1,8 @@
 node_modules
+
+# BMAD System files
+.bmad/agents/
+.bmad/_cfg/
+.agent/
+# Твой скрипт
+p.py
