@@ -1,5 +1,13 @@
 === FILE TREE ===
 my-abiturient/
+└── .agent/
+    └── workflows/
+        └── build.md
+        └── deploy.md
+        └── dev.md
+        └── docker.md
+        └── lint.md
+        └── test.md
 └── .bmad/
     └── _cfg/
         └── agent-manifest.csv
@@ -311,10 +319,14 @@ my-abiturient/
             └── party-mode/
                 └── instructions.md
                 └── workflow.yaml
+└── .github/
+    └── workflows/
+        └── ci.yml
 └── .gitignore
 └── README.md
 └── apps/
     └── api/
+        └── .env.example
         └── .gitignore
         └── package.json
         └── src/
@@ -333,6 +345,8 @@ my-abiturient/
                     └── register.dto.ts
                 └── jwt-auth.guard.ts
                 └── jwt.strategy.ts
+                └── roles.decorator.ts
+                └── roles.guard.ts
             └── camunda/
                 └── camunda.controller.ts
                 └── camunda.module.ts
@@ -369,6 +383,12 @@ my-abiturient/
                 └── tasks.controller.ts
                 └── tasks.module.ts
                 └── tasks.service.ts
+            └── telegram/
+                └── telegram.module.ts
+                └── telegram.service.ts
+        └── test/
+            └── auth.e2e-spec.ts
+            └── jest-e2e.json
         └── tsconfig.build.json
         └── tsconfig.json
     └── web/
@@ -467,7 +487,32 @@ my-abiturient/
     └── api.Dockerfile
     └── web.Dockerfile
 └── docs/
+    └── epics-stories.md
+    └── external_database_setup.md
+    └── prd.md
+    └── project-brief.md
     └── sprint-artifacts/
+    └── stories/
+        └── US1.1-login.md
+        └── US1.2-tenant-isolation.md
+        └── US1.3-role-management.md
+        └── US2.1-task-matrix.md
+        └── US2.2-kanban-board.md
+        └── US2.3-document-upload.md
+        └── US2.4-submit-task.md
+        └── US2.5-xp-avatar.md
+        └── US2.6-download-zip.md
+        └── US3.1-curator-student-list.md
+        └── US3.2-review-inbox.md
+        └── US3.3-approve-submission.md
+        └── US3.4-reject-submission.md
+        └── US4.1-manage-uni-country.md
+        └── US4.2-task-templates.md
+        └── US4.3-onboard-curators.md
+        └── US5.1-camunda-sync.md
+        └── US5.2-link-telegram.md
+        └── US5.3-parent-notifications.md
+        └── US5.4-minio-storage.md
 └── next-env.d.ts
 └── p.py
 └── package.json
@@ -478,6 +523,270 @@ my-abiturient/
 └── tz.md
 
 === CODE SNAPSHOT (libraries/build/lock files excluded) ===
+
+--- BEGIN FILE: .agent/workflows/build.md ---
+---
+description: Build the project for production
+---
+
+# Production Build Workflow
+
+This workflow builds the project for production deployment.
+
+## Steps
+
+// turbo
+1. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+// turbo
+2. **Run production build**
+   ```bash
+   npm run build
+   ```
+
+3. **Verify build output**
+   - Check the build output directory (usually `dist/` or `build/`)
+   - Ensure there are no build errors
+   - Review any warnings that may need attention
+
+// turbo
+4. **Preview production build** (optional)
+   ```bash
+   npm run preview
+   ```
+
+## Notes
+- The build process compiles and optimizes all assets
+- Build artifacts are typically placed in a `dist/` or `build/` directory
+- Always test the production build before deploying
+--- END FILE: .agent/workflows/build.md ---
+
+--- BEGIN FILE: .agent/workflows/deploy.md ---
+---
+description: Deploy the application
+---
+
+# Deployment Workflow
+
+This workflow deploys the application to production.
+
+## Pre-deployment Checklist
+
+1. **Run tests**
+   ```bash
+   npm test
+   ```
+
+2. **Run linter**
+   ```bash
+   npm run lint
+   ```
+
+3. **Build for production**
+   ```bash
+   npm run build
+   ```
+
+4. **Test production build locally**
+   ```bash
+   npm run preview
+   ```
+
+## Deployment Steps
+
+5. **Commit and push changes**
+   ```bash
+   git add .
+   git commit -m "Your commit message"
+   git push origin main
+   ```
+
+6. **Deploy** (method depends on your hosting platform)
+   - For Vercel: `vercel --prod`
+   - For Netlify: `netlify deploy --prod`
+   - For custom server: Follow your deployment script
+
+## Post-deployment
+
+7. **Verify deployment**
+   - Check the production URL
+   - Test critical functionality
+   - Monitor for errors
+
+## Notes
+- Always test thoroughly before deploying
+- Keep deployment credentials secure
+- Monitor application logs after deployment
+- Have a rollback plan ready
+--- END FILE: .agent/workflows/deploy.md ---
+
+--- BEGIN FILE: .agent/workflows/dev.md ---
+---
+description: Start the development server
+---
+
+# Development Server Workflow
+
+This workflow starts the development server for the project.
+
+## Steps
+
+// turbo
+1. **Install dependencies** (if needed)
+   ```bash
+   npm install
+   ```
+
+// turbo
+2. **Start the development server**
+   ```bash
+   npm run dev
+   ```
+
+3. **Access the application**
+   - The server should now be running
+   - Check the terminal output for the local URL (typically http://localhost:3000 or similar)
+   - Open the URL in your browser
+
+## Notes
+- Make sure all dependencies are installed before starting the dev server
+- The server will watch for file changes and hot-reload automatically
+- Press Ctrl+C in the terminal to stop the server
+--- END FILE: .agent/workflows/dev.md ---
+
+--- BEGIN FILE: .agent/workflows/docker.md ---
+---
+description: Build and run Docker containers
+---
+
+# Docker Workflow
+
+This workflow builds and runs the application using Docker.
+
+## Steps
+
+1. **Build Docker images**
+   ```bash
+   docker-compose build
+   ```
+
+2. **Start containers**
+   ```bash
+   docker-compose up -d
+   ```
+
+3. **View logs**
+   ```bash
+   docker-compose logs -f
+   ```
+
+4. **Stop containers**
+   ```bash
+   docker-compose down
+   ```
+
+## Rebuild and Restart
+
+If you need to rebuild and restart:
+
+```bash
+docker-compose down
+docker-compose up -d --build
+```
+
+## Notes
+- Make sure Docker and Docker Compose are installed
+- The `-d` flag runs containers in detached mode
+- Use `docker-compose logs -f [service-name]` to view logs for a specific service
+- Check `docker-compose.yml` for service configurations
+--- END FILE: .agent/workflows/docker.md ---
+
+--- BEGIN FILE: .agent/workflows/lint.md ---
+---
+description: Lint and format code
+---
+
+# Linting and Formatting Workflow
+
+This workflow checks and fixes code quality issues.
+
+## Steps
+
+// turbo
+1. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+// turbo
+2. **Run linter**
+   ```bash
+   npm run lint
+   ```
+
+// turbo
+3. **Fix auto-fixable issues**
+   ```bash
+   npm run lint -- --fix
+   ```
+
+// turbo
+4. **Format code** (if using Prettier)
+   ```bash
+   npm run format
+   ```
+
+## Notes
+- Linting helps maintain code quality and consistency
+- Many issues can be auto-fixed with the `--fix` flag
+- Configure linting rules in `.eslintrc` or similar config files
+- Format on save in your editor for best experience
+--- END FILE: .agent/workflows/lint.md ---
+
+--- BEGIN FILE: .agent/workflows/test.md ---
+---
+description: Run tests for the project
+---
+
+# Testing Workflow
+
+This workflow runs the test suite for the project.
+
+## Steps
+
+// turbo
+1. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+// turbo
+2. **Run all tests**
+   ```bash
+   npm test
+   ```
+
+// turbo
+3. **Run tests in watch mode** (for development)
+   ```bash
+   npm test -- --watch
+   ```
+
+// turbo
+4. **Run tests with coverage**
+   ```bash
+   npm test -- --coverage
+   ```
+
+## Notes
+- Tests should be run before committing changes
+- Watch mode is useful during development for immediate feedback
+- Coverage reports help identify untested code
+- Check the test configuration in `package.json` or test config files
+--- END FILE: .agent/workflows/test.md ---
 
 --- BEGIN FILE: .bmad/_cfg/agents/bmm-analyst.customize.yaml ---
 # Agent Customization
@@ -61097,6 +61406,52 @@ web_bundle:
     - ".bmad/_cfg/agent-manifest.csv"
 --- END FILE: .bmad/core/workflows/party-mode/workflow.yaml ---
 
+--- BEGIN FILE: .github/workflows/ci.yml ---
+name: CI
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  lint-and-typecheck:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [api, web]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install Dependencies
+      run: npm ci
+      # Assuming root package.json has workspaces or we install in specific dirs.
+      # Since it seems to be a monorepo without workspaces (std folder structure), we might need to install in each.
+      # Let's check root package.json first.
+      
+    - name: Install dependencies for ${{ matrix.app }}
+      run: |
+        cd apps/${{ matrix.app }}
+        npm install
+
+    - name: Lint ${{ matrix.app }}
+      run: |
+        cd apps/${{ matrix.app }}
+        npm run lint --if-present
+
+    - name: Build ${{ matrix.app }}
+      run: |
+        cd apps/${{ matrix.app }}
+        npm run build --if-present
+--- END FILE: .github/workflows/ci.yml ---
+
 --- BEGIN FILE: .gitignore ---
 node_modules
 --- END FILE: .gitignore ---
@@ -61148,11 +61503,13 @@ Before running the API, ensure the database is ready:
    ```bash
    docker-compose up -d
    ```
-2. Apply migrations and seed data (in apps/api directory):
+
+2. The application uses TypeORM with `synchronize: true` for development, so tables will be created automatically when you start the API.
+
+3. To seed initial data:
    ```bash
    cd apps/api
-   npx prisma migrate dev --name init
-   npx prisma db seed
+   npm run seed
    ```
 --- END FILE: README.md ---
 
@@ -61182,27 +61539,32 @@ node_modules
   "dependencies": {
     "@nestjs/axios": "^3.0.0",
     "@nestjs/common": "^10.0.0",
+    "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^10.0.0",
     "@nestjs/jwt": "^10.2.0",
     "@nestjs/passport": "^10.0.3",
     "@nestjs/platform-express": "^10.0.0",
     "@nestjs/typeorm": "^10.0.2",
+    "@types/node-telegram-bot-api": "^0.64.13",
+    "archiver": "^7.0.1",
     "axios": "^1.7.0",
+    "minio": "^7.1.3",
+    "node-telegram-bot-api": "^0.67.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pg": "^8.11.3",
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.0",
-    "typeorm": "^0.3.20",
-    "minio": "^7.1.3"
+    "typeorm": "^0.3.20"
   },
   "devDependencies": {
     "@nestjs/testing": "^10.4.20",
+    "@types/archiver": "^7.0.0",
     "@types/jest": "^30.0.0",
+    "@types/multer": "^1.4.11",
     "@types/node": "^20",
     "@types/passport-jwt": "^3.0.8",
     "@types/supertest": "^6.0.0",
-    "@types/multer": "^1.4.11",
     "dotenv": "^16.6.1",
     "jest": "^29.7.0",
     "rimraf": "^5.0.5",
@@ -61211,6 +61573,9 @@ node_modules
     "ts-node": "^10.9.0",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.0.0"
+  },
+  "overrides": {
+    "tough-cookie": "^4.1.3"
   },
   "jest": {
     "moduleFileExtensions": [
@@ -61245,6 +61610,12 @@ export class AdminController {
   @Post("countries")
   createCountry(@Body() dto: any) {
     return this.adminService.createCountry(dto);
+  }
+
+  // --- НОВЫЙ ЭНДПОИНТ ---
+  @Patch("countries/:id")
+  updateCountry(@Param("id") id: string, @Body() dto: any) {
+    return this.adminService.updateCountry(id, dto);
   }
 
   @Get("universities")
@@ -61702,11 +62073,18 @@ export class AdminService {
   async deleteProgram(id: number) {
     return this.programRepo.delete(id);
   }
+
+  // --- НОВЫЙ МЕТОД ---
+  async updateCountry(id: string, data: Partial<Country>) {
+    await this.countryRepo.update(id, data);
+    return this.countryRepo.findOneBy({ id });
+  }
 }
 --- END FILE: apps/api/src/admin/admin.service.ts ---
 
 --- BEGIN FILE: apps/api/src/app.module.ts ---
 import { Module } from "@nestjs/common";
+import { ConfigModule } from "@nestjs/config";
 import { HttpModule } from "@nestjs/axios";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { CamundaModule } from "./camunda/camunda.module";
@@ -61716,6 +62094,7 @@ import { TasksModule } from "./tasks/tasks.module";
 import { AdminModule } from "./admin/admin.module";
 import { FilesModule } from "./files/files.module";
 import { StudentsModule } from "./students/students.module";
+import { TelegramModule } from "./telegram/telegram.module";
 
 // Entities
 import { Company } from "./entities/company.entity";
@@ -61730,6 +62109,9 @@ import { Curator } from "./entities/curator.entity";
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
     HttpModule,
     TypeOrmModule.forRoot({
       type: 'postgres',
@@ -61745,9 +62127,10 @@ import { Curator } from "./entities/curator.entity";
     AdminModule,
     FilesModule,
     StudentsModule,
+    TelegramModule,
   ],
 })
-export class AppModule {}
+export class AppModule { }
 --- END FILE: apps/api/src/app.module.ts ---
 
 --- BEGIN FILE: apps/api/src/auth/auth.controller.ts ---
@@ -61815,49 +62198,64 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { CamundaService } from '../camunda/camunda.service';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaClient } from '@prisma/client';
 import { TasksService } from '../tasks/tasks.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { User } from '../entities/user.entity';
+import { Student } from '../entities/student.entity';
+import { Company } from '../entities/company.entity';
+import { DataSource } from 'typeorm';
+import { Role } from '../entities/enums';
+import { UnauthorizedException, BadRequestException } from '@nestjs/common';
 
-// Mock Prisma
-const mockPrisma: any = {
-  company: { findFirst: jest.fn() },
-  user: { findFirst: jest.fn(), create: jest.fn() },
-  student: { create: jest.fn(), update: jest.fn() },
-  $transaction: jest.fn((cb) => cb(mockPrisma)),
+// Mocks
+const mockRepo = {
+  findOne: jest.fn(),
+  create: jest.fn(),
+  save: jest.fn(),
+  update: jest.fn(),
 };
 
-// Mock Camunda
+const mockQueryRunner = {
+  connect: jest.fn(),
+  startTransaction: jest.fn(),
+  commitTransaction: jest.fn(),
+  rollbackTransaction: jest.fn(),
+  release: jest.fn(),
+  manager: {
+    save: jest.fn(),
+  },
+};
+
+const mockDataSource = {
+  createQueryRunner: jest.fn().mockReturnValue(mockQueryRunner),
+};
+
 const mockCamunda = {
-  startProcessByKey: jest.fn(() => Promise.resolve({ id: 'process-123' })),
+  startProcessByKey: jest.fn(),
 };
 
-// Mock TasksService
 const mockTasksService = {
-  generateInitialTasks: jest.fn(),
+  syncTasksForUser: jest.fn(),
 };
 
-// MOCK PRISMA CLIENT MODULE
-jest.mock('@prisma/client', () => {
-  return {
-    PrismaClient: jest.fn().mockImplementation(() => mockPrisma),
-    Role: { STUDENT: 'STUDENT', CURATOR: 'CURATOR', ADMIN: 'ADMIN' }
-  };
-});
-
-// Mock JWT
 const mockJwt = {
   sign: jest.fn(() => 'mock_token'),
 };
 
 describe('AuthService', () => {
   let service: AuthService;
+  let userRepo: any;
+  let studentRepo: any;
+  let companyRepo: any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
-        { provide: PrismaService, useValue: mockPrisma },
+        { provide: getRepositoryToken(User), useValue: { ...mockRepo } },
+        { provide: getRepositoryToken(Student), useValue: { ...mockRepo } },
+        { provide: getRepositoryToken(Company), useValue: { ...mockRepo } },
+        { provide: DataSource, useValue: mockDataSource },
         { provide: CamundaService, useValue: mockCamunda },
         { provide: JwtService, useValue: mockJwt },
         { provide: TasksService, useValue: mockTasksService },
@@ -61865,6 +62263,13 @@ describe('AuthService', () => {
     }).compile();
 
     service = module.get<AuthService>(AuthService);
+    userRepo = module.get(getRepositoryToken(User));
+    studentRepo = module.get(getRepositoryToken(Student));
+    companyRepo = module.get(getRepositoryToken(Company));
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -61872,39 +62277,93 @@ describe('AuthService', () => {
   });
 
   describe('register', () => {
-    it('should register a new student', async () => {
+    it('should register a new student successfully', async () => {
       // Arrange
-      mockPrisma.company.findFirst.mockResolvedValue({ id: 'comp-1' });
-      
-      // 1-й вызов (проверка существования) -> null
-      // 2-й вызов (логин после регистрации) -> user с хешем
-      mockPrisma.user.findFirst
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({ id: 'user-1', role: 'STUDENT', email: 'test@test.com', passwordHash: 'hashed_123', companyId: 'comp-1' });
+      const company = { id: 'comp-1' };
+      companyRepo.findOne.mockResolvedValue(company);
+      userRepo.findOne.mockResolvedValue(null); // User not exists
 
-      mockPrisma.user.create.mockResolvedValue({ id: 'user-1', role: 'STUDENT', email: 'test@test.com', passwordHash: 'hashed_123' });
-      mockPrisma.student.create.mockResolvedValue({ id: 'stud-1' });
-      
+      // Mock Transaction
+      const savedUser = { id: 'user-1', email: 'test@test.com', role: Role.STUDENT, companyId: 'comp-1' };
+      mockQueryRunner.manager.save
+        .mockResolvedValueOnce(savedUser) // Save User
+        .mockResolvedValueOnce({ id: 'student-1' }); // Save Student
+
+      mockCamunda.startProcessByKey.mockResolvedValue({ id: 'proc-1' });
+
+      // Stub login
+      jest.spyOn(service, 'login').mockResolvedValue({ accessToken: 'token', user: savedUser } as any);
+
       // Act
       const result = await service.register({
         email: 'test@test.com',
         password: '123',
-        role: 'student'
+        role: 'student',
       });
 
       // Assert
+      expect(companyRepo.findOne).toHaveBeenCalled();
+      expect(userRepo.findOne).toHaveBeenCalled();
+      expect(mockDataSource.createQueryRunner).toHaveBeenCalled();
+      expect(mockQueryRunner.startTransaction).toHaveBeenCalled();
+      expect(mockQueryRunner.manager.save).toHaveBeenCalledTimes(2); // User + Student
       expect(mockCamunda.startProcessByKey).toHaveBeenCalled();
-      expect(result).toHaveProperty('accessToken');
-      expect(result.user.role).toBe('STUDENT');
+      expect(studentRepo.update).toHaveBeenCalledWith({ userId: 'user-1' }, { camundaProcessInstanceId: 'proc-1' });
+      expect(mockTasksService.syncTasksForUser).toHaveBeenCalledWith('user-1');
+      expect(service.login).toHaveBeenCalled();
     });
 
-    it('should throw if user exists', async () => {
-      mockPrisma.company.findFirst.mockResolvedValue({ id: 'comp-1' });
-      mockPrisma.user.findFirst.mockResolvedValue({ id: 'existing' });
+    it('should throw if user already exists', async () => {
+      companyRepo.findOne.mockResolvedValue({ id: 'comp-1' });
+      userRepo.findOne.mockResolvedValue({ id: 'existing' });
 
       await expect(
         service.register({ email: 'exist@test.com', password: '123' })
-      ).rejects.toThrow();
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should rollback transaction on error', async () => {
+      companyRepo.findOne.mockResolvedValue({ id: 'comp-1' });
+      userRepo.findOne.mockResolvedValue(null);
+
+      mockQueryRunner.manager.save.mockRejectedValue(new Error('DB Error'));
+
+      await expect(
+        service.register({ email: 'fail@test.com', password: '123' })
+      ).rejects.toThrow('DB Error');
+
+      expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalled();
+      expect(mockQueryRunner.release).toHaveBeenCalled();
+    });
+  });
+
+  describe('login', () => {
+    it('should return token for valid credentials', async () => {
+      const user = {
+        id: 'u-1',
+        email: 'test@test.com',
+        passwordHash: 'hashed_123', // Matches hashPassword('123') logic in service
+        role: Role.STUDENT,
+        companyId: 'c-1'
+      };
+      userRepo.findOne.mockResolvedValue(user);
+
+      const result = await service.login({ email: 'test@test.com', password: '123' });
+      expect(result.accessToken).toBe('mock_token');
+    });
+
+    it('should throw Unauthorized for invalid password', async () => {
+      const user = {
+        id: 'u-1',
+        email: 'test@test.com',
+        passwordHash: 'hashed_123',
+        role: Role.STUDENT
+      };
+      userRepo.findOne.mockResolvedValue(user);
+
+      await expect(
+        service.login({ email: 'test@test.com', password: 'wrong' })
+      ).rejects.toThrow(UnauthorizedException);
     });
   });
 });
@@ -62111,6 +62570,41 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 }
 --- END FILE: apps/api/src/auth/jwt.strategy.ts ---
 
+--- BEGIN FILE: apps/api/src/auth/roles.decorator.ts ---
+import { SetMetadata } from '@nestjs/common';
+import { Role } from '../entities/enums';
+
+export const ROLES_KEY = 'roles';
+export const Roles = (...roles: Role[]) => SetMetadata(ROLES_KEY, roles);
+--- END FILE: apps/api/src/auth/roles.decorator.ts ---
+
+--- BEGIN FILE: apps/api/src/auth/roles.guard.ts ---
+import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { ROLES_KEY } from './roles.decorator';
+import { Role } from '../entities/enums';
+
+@Injectable()
+export class RolesGuard implements CanActivate {
+    constructor(private reflector: Reflector) { }
+
+    canActivate(context: ExecutionContext): boolean {
+        const requiredRoles = this.reflector.getAllAndOverride<Role[]>(ROLES_KEY, [
+            context.getHandler(),
+            context.getClass(),
+        ]);
+        if (!requiredRoles) {
+            return true;
+        }
+        const { user } = context.switchToHttp().getRequest();
+
+        // Allow if user has one of the required roles
+        // Note: Enum matching might need strict check depending on how user.role is stored (string vs enum)
+        return requiredRoles.some((role) => user.role === role);
+    }
+}
+--- END FILE: apps/api/src/auth/roles.guard.ts ---
+
 --- BEGIN FILE: apps/api/src/camunda/camunda.controller.ts ---
 import { Controller, Get, Post, Body, Query } from "@nestjs/common";
 import { CamundaService } from "./camunda.service";
@@ -62294,6 +62788,10 @@ export class Country {
   @Column()
   flagIcon!: string;
 
+  // --- НОВОЕ ПОЛЕ ---
+  @Column('jsonb', { default: [] })
+  requiredDocumentIds!: number[];
+
   @OneToMany(() => University, (uni) => uni.country)
   universities!: University[];
 }
@@ -62424,6 +62922,9 @@ export class Student {
 
   @Column({ nullable: true })
   bindingCode?: string;
+
+  @Column({ type: 'bigint', nullable: true }) // Telegram Chat ID может быть большим
+  telegramGroupId?: string;
 
   @Column({ default: 0 })
   xpTotal!: number;
@@ -62594,7 +63095,7 @@ export class FilesController {
   @Post('upload')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor('file'))
-  async uploadFile(@UploadedFile() file: Express.Multer.File) {
+  async uploadFile(@UploadedFile() file: any) {
     const url = await this.filesService.uploadFile(file);
     return { url };
   }
@@ -62609,8 +63110,9 @@ import { FilesService } from './files.service';
 @Module({
   controllers: [FilesController],
   providers: [FilesService],
+  exports: [FilesService], // Export FilesService
 })
-export class FilesModule {}
+export class FilesModule { }
 --- END FILE: apps/api/src/files/files.module.ts ---
 
 --- BEGIN FILE: apps/api/src/files/files.service.ts ---
@@ -62652,7 +63154,7 @@ export class FilesService implements OnModuleInit {
     }
   }
 
-  async uploadFile(file: Express.Multer.File) {
+  async uploadFile(file: any) {
     const fileName = `${Date.now()}-${file.originalname}`;
     await this.minioClient.putObject(
       this.bucketName,
@@ -62661,10 +63163,14 @@ export class FilesService implements OnModuleInit {
       file.size,
       { 'Content-Type': file.mimetype }
     );
-    
+
     // Возвращаем URL. В проде здесь должен быть публичный домен, сейчас для локальной разработки:
     const host = process.env.MINIO_EXTERNAL_HOST || 'localhost';
     return `http://${host}:9000/${this.bucketName}/${fileName}`;
+  }
+
+  async getFileStream(objectName: string) {
+    return await this.minioClient.getObject(this.bucketName, objectName);
   }
 }
 --- END FILE: apps/api/src/files/files.service.ts ---
@@ -62732,13 +63238,19 @@ async function seed() {
     // 2. Countries
     const countryRepo = AppDataSource.getRepository(Country);
     const countriesData = [
-        { id: 'at', name: 'Австрия', flagIcon: '🇦🇹' },
-        { id: 'it', name: 'Италия', flagIcon: '🇮🇹' },
-        { id: 'de', name: 'Германия', flagIcon: '🇩🇪' },
-        { id: 'us', name: 'США', flagIcon: '🇺🇸' },
-        { id: 'uk', name: 'Великобритания', flagIcon: '🇬🇧' },
-        { id: 'fr', name: 'Франция', flagIcon: '🇫🇷' },
-        { id: 'nl', name: 'Нидерланды', flagIcon: '🇳🇱' },
+        { 
+            id: 'at', 
+            name: 'Австрия', 
+            flagIcon: '🇦🇹', 
+            // Добавляем дефолтные ID документов (пример)
+            requiredDocumentIds: [101, 102, 201, 202, 203] 
+        },
+        { id: 'it', name: 'Италия', flagIcon: '🇮🇹', requiredDocumentIds: [] },
+        { id: 'de', name: 'Германия', flagIcon: '🇩🇪', requiredDocumentIds: [] },
+        { id: 'us', name: 'США', flagIcon: '🇺🇸', requiredDocumentIds: [] },
+        { id: 'uk', name: 'Великобритания', flagIcon: '🇬🇧', requiredDocumentIds: [] },
+        { id: 'fr', name: 'Франция', flagIcon: '🇫🇷', requiredDocumentIds: [] },
+        { id: 'nl', name: 'Нидерланды', flagIcon: '🇳🇱', requiredDocumentIds: [] },
     ];
 
     for (const c of countriesData) {
@@ -62986,7 +63498,8 @@ export class SubmitTaskDto {
 --- END FILE: apps/api/src/tasks/dto/submit-task.dto.ts ---
 
 --- BEGIN FILE: apps/api/src/tasks/tasks.controller.ts ---
-import { Body, Controller, Get, Param, Post, Request, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Request, Res, UseGuards } from "@nestjs/common";
+import { Response } from 'express';
 import { TasksService } from "./tasks.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { SubmitTaskDto } from "./dto/submit-task.dto";
@@ -62995,7 +63508,7 @@ import { RejectTaskDto } from "./dto/approve-task.dto";
 @Controller()
 @UseGuards(JwtAuthGuard)
 export class TasksController {
-  constructor(private readonly tasksService: TasksService) {}
+  constructor(private readonly tasksService: TasksService) { }
 
   @Get("student/tasks")
   getMyTasks(@Request() req: any) {
@@ -63030,8 +63543,16 @@ export class TasksController {
   // --- ИСПРАВЛЕНИЕ ЗДЕСЬ ---
   @Post("debug/generate")
   generate(@Request() req: any) {
-      // Используем новый метод syncTasksForUser вместо удаленного generateInitialTasks
-      return this.tasksService.syncTasksForUser(req.user.userId);
+    // Используем новый метод syncTasksForUser вместо удаленного generateInitialTasks
+    return this.tasksService.syncTasksForUser(req.user.userId);
+  }
+
+  @Get("download-zip")
+  async downloadZip(@Request() req: any, @Res() res: Response) {
+    const archive = await this.tasksService.downloadZip(req.user.userId);
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', 'attachment; filename="documents.zip"');
+    archive.pipe(res);
   }
   // -------------------------
 }
@@ -63045,14 +63566,18 @@ import { TasksController } from "./tasks.controller";
 import { Task } from "../entities/task.entity";
 import { Student } from "../entities/student.entity";
 import { TaskTemplate } from "../entities/task-template.entity"; // <-- Добавили
+import { FilesModule } from "../files/files.module";
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Task, Student, TaskTemplate])], // <-- Добавили
+  imports: [
+    TypeOrmModule.forFeature([Task, Student, TaskTemplate]),
+    FilesModule // Import FilesModule
+  ],
   providers: [TasksService],
   controllers: [TasksController],
   exports: [TasksService],
 })
-export class TasksModule {}
+export class TasksModule { }
 --- END FILE: apps/api/src/tasks/tasks.module.ts ---
 
 --- BEGIN FILE: apps/api/src/tasks/tasks.service.ts ---
@@ -63063,14 +63588,17 @@ import { Task } from "../entities/task.entity";
 import { Student } from "../entities/student.entity";
 import { TaskTemplate } from "../entities/task-template.entity";
 import { TaskStatus } from "../entities/enums";
+import archiver from 'archiver';
+import { FilesService } from "../files/files.service";
 
 @Injectable()
 export class TasksService {
   constructor(
     @InjectRepository(Task) private taskRepo: Repository<Task>,
     @InjectRepository(Student) private studentRepo: Repository<Student>,
-    @InjectRepository(TaskTemplate) private templateRepo: Repository<TaskTemplate>
-  ) {}
+    @InjectRepository(TaskTemplate) private templateRepo: Repository<TaskTemplate>,
+    private filesService: FilesService
+  ) { }
 
   async findAllForUser(userId: string) {
     const student = await this.studentRepo.findOne({ where: { userId } });
@@ -63084,8 +63612,8 @@ export class TasksService {
 
   async submitTask(taskId: string, submission: any) {
     await this.taskRepo.update(taskId, {
-        status: TaskStatus.REVIEW,
-        submission: submission
+      status: TaskStatus.REVIEW,
+      submission: submission
     });
     return this.taskRepo.findOneBy({ id: Number(taskId) });
   }
@@ -63103,11 +63631,11 @@ export class TasksService {
 
     task.status = TaskStatus.DONE;
     await this.taskRepo.save(task);
-    
+
     const student = await this.studentRepo.findOneBy({ id: task.studentId });
     if (student) {
-        student.xpTotal += task.xpReward;
-        await this.studentRepo.save(student);
+      student.xpTotal += task.xpReward;
+      await this.studentRepo.save(student);
     }
 
     return task;
@@ -63134,42 +63662,42 @@ export class TasksService {
 
     // 1. Находим шаблоны для страны И для выбранных программ
     const applicableTemplates = await this.templateRepo.find({
-        where: [
-            // Задачи страны (общие)
-            { countryId: countryId, programId: undefined }, // null
-            // Задачи программ
-            ...(programIds.length > 0 ? programIds.map(pid => ({ programId: pid, countryId: countryId })) : [])
-        ]
+      where: [
+        // Задачи страны (общие)
+        { countryId: countryId, programId: undefined }, // null
+        // Задачи программ
+        ...(programIds.length > 0 ? programIds.map(pid => ({ programId: pid, countryId: countryId })) : [])
+      ]
     });
 
     if (applicableTemplates.length === 0) return;
 
     // 2. Проверяем, какие уже есть
     const existingTasks = await this.taskRepo.find({
-        where: { studentId: student.id },
-        select: ['title', 'stage']
+      where: { studentId: student.id },
+      select: ['title', 'stage']
     });
-    
+
     const existingKeys = new Set(existingTasks.map(t => `${t.stage}-${t.title}`));
 
     // 3. Создаем новые
-    const templatesToCreate = applicableTemplates.filter(tpl => 
-        !existingKeys.has(`${tpl.stage}-${tpl.title}`)
+    const templatesToCreate = applicableTemplates.filter(tpl =>
+      !existingKeys.has(`${tpl.stage}-${tpl.title}`)
     );
 
     if (templatesToCreate.length > 0) {
-        const newTasks = templatesToCreate.map(t => this.taskRepo.create({
-            companyId: student.companyId,
-            studentId: student.id,
-            stage: t.stage,
-            title: t.title,
-            description: t.description,
-            xpReward: t.xpReward,
-            status: TaskStatus.TODO
-        }));
+      const newTasks = templatesToCreate.map(t => this.taskRepo.create({
+        companyId: student.companyId,
+        studentId: student.id,
+        stage: t.stage,
+        title: t.title,
+        description: t.description,
+        xpReward: t.xpReward,
+        status: TaskStatus.TODO
+      }));
 
-        await this.taskRepo.save(newTasks);
-        console.log(`[SyncTasks] Created ${newTasks.length} new tasks for student ${student.fullName}`);
+      await this.taskRepo.save(newTasks);
+      console.log(`[SyncTasks] Created ${newTasks.length} new tasks for student ${student.fullName}`);
     }
   }
 
@@ -63177,10 +63705,10 @@ export class TasksService {
    * Хелпер: Синхронизация по User ID (для вызова из Auth и Контроллера)
    */
   async syncTasksForUser(userId: string) {
-      const student = await this.studentRepo.findOne({ where: { userId } });
-      if (student) {
-          await this.syncStudentTasks(student.id);
-      }
+    const student = await this.studentRepo.findOne({ where: { userId } });
+    if (student) {
+      await this.syncStudentTasks(student.id);
+    }
   }
 
   async findAllForStudentEntity(studentId: string) {
@@ -63189,8 +63717,223 @@ export class TasksService {
       order: { id: 'ASC' }
     });
   }
+
+  async downloadZip(userId: string) {
+    const student = await this.studentRepo.findOne({ where: { userId } });
+    if (!student) throw new NotFoundException("Student not found");
+
+    const tasks = await this.taskRepo.find({
+      where: { studentId: student.id, status: TaskStatus.DONE }
+    });
+
+    const archive = archiver('zip', {
+      zlib: { level: 9 }
+    });
+
+    // Обрабатываем файлы параллельно или последовательно. 
+    // Для надежности архивации лучше последовательно добавлять в stream.
+    for (const task of tasks) {
+      if (!task.submission) continue;
+
+      let fileUrl: string | null = null;
+      if (typeof task.submission === 'string') {
+        fileUrl = task.submission;
+      } else if (typeof task.submission === 'object' && task.submission.url) {
+        fileUrl = task.submission.url;
+      }
+
+      if (!fileUrl) continue;
+
+      try {
+        // fileUrl example: http://host:9000/bucket/filename
+        const urlObj = new URL(fileUrl);
+        const pathParts = urlObj.pathname.split('/');
+        const objectName = pathParts[pathParts.length - 1];
+
+        // Красивое имя файла
+        let friendlyName = objectName;
+        const match = objectName.match(/^\d+-(.+)$/);
+        if (match) {
+          friendlyName = match[1];
+        }
+
+        const safeTitle = task.title.replace(/[^a-zA-Z0-9а-яА-Я ]/g, '_');
+        const entryName = `${safeTitle}_${friendlyName}`;
+
+        const stream = await this.filesService.getFileStream(objectName);
+        archive.append(stream, { name: entryName });
+      } catch (e) {
+        console.error(`Failed to archive task ${task.id} file`, e);
+      }
+    }
+
+    archive.finalize();
+    return archive;
+  }
 }
 --- END FILE: apps/api/src/tasks/tasks.service.ts ---
+
+--- BEGIN FILE: apps/api/src/telegram/telegram.module.ts ---
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { TelegramService } from './telegram.service';
+import { Student } from '../entities/student.entity';
+
+@Module({
+    imports: [TypeOrmModule.forFeature([Student])],
+    providers: [TelegramService],
+    exports: [TelegramService],
+})
+export class TelegramModule { }
+--- END FILE: apps/api/src/telegram/telegram.module.ts ---
+
+--- BEGIN FILE: apps/api/src/telegram/telegram.service.ts ---
+import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import TelegramBot from 'node-telegram-bot-api';
+import { Student } from '../entities/student.entity';
+
+@Injectable()
+export class TelegramService implements OnModuleInit {
+    private bot: TelegramBot | null = null;
+    private readonly logger = new Logger(TelegramService.name);
+
+    constructor(
+        @InjectRepository(Student)
+        private readonly studentRepository: Repository<Student>,
+    ) { }
+
+    onModuleInit() {
+        const token = process.env.TELEGRAM_BOT_TOKEN;
+        if (!token) {
+            this.logger.warn('TELEGRAM_BOT_TOKEN not set. Telegram integration disabled.');
+            return;
+        }
+
+        this.bot = new TelegramBot(token, { polling: true });
+        this.logger.log('Telegram Bot initialized');
+
+        this.initializeHandlers();
+    }
+
+    private initializeHandlers() {
+        if (!this.bot) return;
+
+        // Handle /link command
+        this.bot.onText(/\/link (.+)/, async (msg, match) => {
+            const chatId = msg.chat.id;
+            const bindingCode = match ? match[1] : null;
+
+            if (!bindingCode) {
+                this.bot?.sendMessage(chatId, 'Пожалуйста, укажите код привязки: /link S-XXXX');
+                return;
+            }
+
+            try {
+                await this.linkGroup(chatId, bindingCode);
+            } catch (error) {
+                this.logger.error(`Error linking group: ${error}`);
+                this.bot?.sendMessage(chatId, 'Произошла ошибка при привязке.');
+            }
+        });
+
+        // Logging errors
+        this.bot.on('polling_error', (error) => {
+            this.logger.error(`Telegram Polling Error: ${error.message}`);
+        });
+    }
+
+    private async linkGroup(chatId: number, bindingCode: string) {
+        if (!this.bot) return;
+
+        this.logger.log(`Attempting to link chat ${chatId} with code ${bindingCode}`);
+
+        const student = await this.studentRepository.findOne({ where: { bindingCode } });
+
+        if (!student) {
+            this.bot.sendMessage(chatId, '❌ Студент с таким кодом не найден. Проверьте правильность ввода.');
+            return;
+        }
+
+        if (student.telegramGroupId) {
+            this.bot.sendMessage(chatId, '⚠️ Этот студент уже привязан к Telegram-группе.');
+            return;
+        }
+
+        // Update student
+        student.telegramGroupId = chatId.toString();
+        await this.studentRepository.save(student);
+
+        this.bot.sendMessage(chatId, `✅ Группа успешно подключена к профилю студента: ${student.fullName}. Ожидайте уведомлений.`);
+        this.logger.log(`Linked student ${student.id} (S-${student.bindingCode}) to chat ${chatId}`);
+    }
+
+    // Method to send notification manually (for future use)
+    public async sendNotification(studentId: string, message: string) {
+        if (!this.bot) return;
+
+        const student = await this.studentRepository.findOne({ where: { id: studentId } });
+        if (!student || !student.telegramGroupId) {
+            this.logger.warn(`Cannot send notification: Student ${studentId} has no telegram link.`);
+            return;
+        }
+
+        try {
+            await this.bot.sendMessage(student.telegramGroupId, message);
+        } catch (e) {
+            this.logger.error(`Failed to send telegram message: ${e}`);
+        }
+    }
+}
+--- END FILE: apps/api/src/telegram/telegram.service.ts ---
+
+--- BEGIN FILE: apps/api/test/auth.e2e-spec.ts ---
+import { Test, TestingModule } from '@nestjs/testing';
+import { INestApplication } from '@nestjs/common';
+import * as request from 'supertest';
+import { AppModule } from '../src/app.module';
+
+describe('AuthController (e2e)', () => {
+    let app: INestApplication;
+
+    beforeEach(async () => {
+        const moduleFixture: TestingModule = await Test.createTestingModule({
+            imports: [AppModule],
+        }).compile();
+
+        app = moduleFixture.createNestApplication();
+        await app.init();
+    });
+
+    it('/auth/login (POST) - failure', () => {
+        return request(app.getHttpServer())
+            .post('/auth/login')
+            .send({ email: 'wrong@example.com', password: 'wrong' })
+            .expect(401);
+    });
+
+    afterAll(async () => {
+        await app.close();
+    });
+});
+--- END FILE: apps/api/test/auth.e2e-spec.ts ---
+
+--- BEGIN FILE: apps/api/test/jest-e2e.json ---
+{
+    "moduleFileExtensions": [
+        "js",
+        "json",
+        "ts"
+    ],
+    "rootDir": ".",
+    "testEnvironment": "node",
+    "testRegex": ".e2e-spec.ts$",
+    "transform": {
+        "^.+\\.(t|j)s$": "ts-jest"
+    }
+}
+--- END FILE: apps/api/test/jest-e2e.json ---
 
 --- BEGIN FILE: apps/api/tsconfig.build.json ---
 {
@@ -63219,9 +63962,12 @@ export class TasksService {
     "baseUrl": "./",
     "incremental": true,
     "strict": true,
+    "skipLibCheck": true,
     "esModuleInterop": true
   },
-  "include": ["src/**/*"]
+  "include": [
+    "src/**/*"
+  ]
 }
 --- END FILE: apps/api/tsconfig.json ---
 
@@ -63275,15 +64021,20 @@ import { useState, useMemo } from "react";
 import { useCountry } from "@/shared/CountryContext";
 import QuestEditModal from "./QuestEditModal";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
 type Props = {
   countryId: string;
   onSaveTask: (task: any) => Promise<void>;
   onDeleteTask: (id: number) => Promise<void>;
+  refreshData?: () => Promise<void>; // Добавляем проп для обновления данных
 };
 
-export default function CountryDetailPanel({ countryId, onSaveTask, onDeleteTask }: Props) {
+export default function CountryDetailPanel({ countryId, onSaveTask, onDeleteTask, refreshData }: Props) {
   const { countries, documents, quests } = useCountry();
   const [editingQuest, setEditingQuest] = useState<any | null>(null);
+  const [isEditingDocs, setIsEditingDocs] = useState(false);
+  const [tempRequiredDocs, setTempRequiredDocs] = useState<number[]>([]);
 
   const country = useMemo(() => countries.find(c => c.id === countryId), [countries, countryId]);
 
@@ -63298,6 +64049,54 @@ export default function CountryDetailPanel({ countryId, onSaveTask, onDeleteTask
      const reqIds = country.required_document_ids || []; 
      return documents.filter(d => reqIds.includes(d.id));
   }, [documents, country]);
+
+  // Инициализация tempRequiredDocs при входе в режим редактирования
+  const enterEditMode = () => {
+    if (country) {
+      setTempRequiredDocs(country.required_document_ids || []);
+    }
+    setIsEditingDocs(true);
+  };
+
+  // Обработка сохранения документов страны
+  const handleSaveCountryDocs = async () => {
+      if (!country) return;
+      const token = localStorage.getItem("accessToken");
+      
+      try {
+          const res = await fetch(`${API_URL}/admin/countries/${country.id}`, {
+              method: "PATCH",
+              headers: { 
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token}` 
+              },
+              body: JSON.stringify({ requiredDocumentIds: tempRequiredDocs })
+          });
+
+          if (!res.ok) throw new Error("Ошибка сохранения");
+          
+          setIsEditingDocs(false);
+          if (refreshData) await refreshData(); // Обновляем данные на клиенте
+      } catch(e) {
+          console.error(e);
+          alert("Не удалось сохранить список документов");
+      }
+  };
+
+  // Exit edit mode
+  const exitEditMode = () => {
+    setIsEditingDocs(false);
+    setTempRequiredDocs([]);
+  };
+
+  // Toggle checkbox
+  const toggleDoc = (docId: number) => {
+    setTempRequiredDocs(prev => 
+      prev.includes(docId) 
+        ? prev.filter(id => id !== docId)
+        : [...prev, docId]
+    );
+  };
 
   const handleCreateNew = () => {
     setEditingQuest({
@@ -63375,24 +64174,60 @@ export default function CountryDetailPanel({ countryId, onSaveTask, onDeleteTask
               <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-white">
                   <span className="text-blue-500">📄</span> Требования к поступлению
               </h3>
-              {requirements.length > 0 ? (
-                  <div className="grid grid-cols-1 gap-2">
-                      {requirements.map((doc: any) => (
-                          <div key={doc.id} className="p-3 rounded-xl bg-zinc-800/50 border border-zinc-800 text-sm flex items-center gap-3">
-                              <span className="text-green-500 text-xs">●</span>
-                              <span className="text-zinc-300">{doc.title}</span>
-                          </div>
-                      ))}
-                  </div>
+              {!isEditingDocs ? (
+                <>
+                  {requirements.length > 0 ? (
+                      <div className="grid grid-cols-1 gap-2">
+                          {requirements.map((doc: any) => (
+                              <div key={doc.id} className="p-3 rounded-xl bg-zinc-800/50 border border-zinc-800 text-sm flex items-center gap-3">
+                                  <span className="text-green-500 text-xs">●</span>
+                                  <span className="text-zinc-300">{doc.title}</span>
+                              </div>
+                          ))}
+                      </div>
+                  ) : (
+                      <p className="text-sm text-zinc-500 italic p-4 border border-dashed border-zinc-800 rounded-xl text-center">
+                          Список документов не настроен.
+                      </p>
+                  )}
+                  <button 
+                    onClick={enterEditMode}
+                    className="mt-3 text-xs text-blue-500 hover:text-blue-400 transition flex items-center gap-1 font-medium"
+                  >
+                      ✏️ Настроить список документов
+                  </button>
+                </>
               ) : (
-                  <p className="text-sm text-zinc-500 italic p-4 border border-dashed border-zinc-800 rounded-xl text-center">
-                      Список документов не настроен.
-                  </p>
+                <div className="mt-4 pt-4 border-t border-zinc-700">
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {documents.map((doc: any) => (
+                      <label key={doc.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-zinc-800/50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={tempRequiredDocs.includes(doc.id)}
+                          onChange={() => toggleDoc(doc.id)}
+                          className="rounded"
+                        />
+                        <span className="text-sm text-zinc-300">{doc.title}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <div className="flex gap-2 mt-4 pt-4 border-t border-zinc-700">
+                    <button
+                      onClick={handleSaveCountryDocs}
+                      className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition"
+                    >
+                      Сохранить
+                    </button>
+                    <button
+                      onClick={exitEditMode}
+                      className="px-3 py-2 bg-zinc-700 hover:bg-zinc-600 text-zinc-300 rounded-lg text-sm transition"
+                    >
+                      Отмена
+                    </button>
+                  </div>
+                </div>
               )}
-              {/* Кнопка редактирования документов пока заглушкой, можно добавить позже */}
-              <button className="mt-3 text-xs text-blue-500 hover:text-blue-400 transition flex items-center gap-1 font-medium">
-                  ✏️ Настроить список документов
-              </button>
           </div>
 
           {/* Tasks Section (Путь поступления) */}
@@ -63410,43 +64245,51 @@ export default function CountryDetailPanel({ countryId, onSaveTask, onDeleteTask
                </div>
               
               <div className="space-y-2">
-                  {countryTasks.length > 0 ? countryTasks.map((task: any) => (
-                      <div key={task.id} className="group flex items-center justify-between p-3 rounded-xl border border-zinc-800 bg-zinc-800/30 hover:bg-zinc-800 transition relative overflow-hidden">
-                          <div className="relative z-10">
-                              <div className="text-[10px] text-zinc-500 uppercase font-bold tracking-wide mb-0.5">{task.stage}</div>
-                              <div className="font-medium text-sm text-zinc-200">{task.title}</div>
-                          </div>
-                          
-                          <div className="flex items-center gap-3 relative z-10">
-                              <div className="text-xs font-bold text-yellow-600 bg-yellow-500/10 border border-yellow-500/20 px-2 py-1 rounded">
-                                  +{task.xpReward} XP
-                              </div>
-                              
-                              {/* Hover Actions */}
-                              <div className="absolute right-0 top-1/2 -translate-y-1/2 flex gap-1 bg-zinc-800 pl-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                   {countryTasks.length > 0 ? countryTasks.map((task: any) => (
+                       <div key={task.id} className="group flex items-center justify-between p-3 rounded-xl border border-zinc-800 bg-zinc-800/30 hover:bg-zinc-800 transition relative overflow-hidden">
+                           <div className="relative z-10">
+                               <div className="flex items-center gap-2 mb-0.5">
+                                    <div className="text-[10px] text-zinc-500 uppercase font-bold tracking-wide">{task.stage}</div>
+                                    {task.isCritical && <span className="text-[9px] bg-red-500/20 text-red-500 px-1 rounded border border-red-500/30">Критично</span>}
+                               </div>
+                               <div className="font-medium text-sm text-zinc-200">{task.title}</div>
+                           </div>
+                           
+                           <div className="flex items-center gap-3 relative z-10">
+                               {/* Submission Type Icon */}
+                               <div className="text-zinc-500 text-xs" title={`Тип сдачи: ${task.submissionType}`}>
+                                   {task.submissionType === 'file' ? '📄' : task.submissionType === 'link' ? '🔗' : task.submissionType === 'text' ? '📝' : '☑️'}
+                               </div>
+                               <div className="text-xs font-bold text-yellow-600 bg-yellow-500/10 border border-yellow-500/20 px-2 py-1 rounded">
+                                   +{task.xpReward} XP
+                               </div>
+                               
+                               {/* Hover Actions */}
+                               <div className="absolute right-0 top-1/2 -translate-y-1/2 flex gap-1 bg-zinc-800 pl-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button 
+                                       onClick={() => setEditingQuest(task)} 
+                                       className="p-1.5 hover:bg-zinc-700 rounded text-blue-400"
+                                       title="Редактировать"
+                                   >
+                                       ✏️
+                                   </button>
                                    <button 
-                                      onClick={() => setEditingQuest(task)} 
-                                      className="p-1.5 hover:bg-zinc-700 rounded text-blue-400"
-                                      title="Редактировать"
-                                  >
-                                      ✏️
-                                  </button>
-                                  <button 
-                                      onClick={() => handleRemoveQuest(task.id)} 
-                                      className="p-1.5 hover:bg-zinc-700 rounded text-red-400"
-                                      title="Удалить"
-                                  >
-                                      🗑️
-                                  </button>
-                              </div>
-                          </div>
-                      </div>
-                  )) : (
-                      <div className="text-center py-8 text-zinc-500 text-sm bg-zinc-800/30 rounded-xl border border-dashed border-zinc-800">
-                          Список задач пуст. Добавьте первую задачу.
-                      </div>
-                  )}
+                                       onClick={() => handleRemoveQuest(task.id)} 
+                                       className="p-1.5 hover:bg-zinc-700 rounded text-red-400"
+                                       title="Удалить"
+                                   >
+                                       🗑️
+                                   </button>
+                               </div>
+                           </div>
+                       </div>
+                   )) : (
+                       <div className="text-center py-8 text-zinc-500 text-sm bg-zinc-800/30 rounded-xl border border-dashed border-zinc-800">
+                           Список задач пуст. Добавьте первую задачу.
+                       </div>
+                   )}
               </div>
+
           </div>
       </div>
 
@@ -63643,7 +64486,7 @@ export default function ProgramDetailPanel({ program, onClose, onEdit }: Props) 
   // Получаем связанные задачи (логика как в модалке)
   const relatedTasks = useMemo(() => {
     return quests.filter((q: any) => 
-        (university?.countryId && q.countryId === university.countryId) ||
+        (university?.countryId && q.countryId === university?.countryId) ||
         (q.universityId === program.university_id) ||
         (q.programId === program.id)
     );
@@ -63749,8 +64592,13 @@ export default function ProgramDetailPanel({ program, onClose, onEdit }: Props) 
                               <div className="text-[10px] text-zinc-500 uppercase font-bold tracking-wide mb-0.5">{task.stage}</div>
                               <div className="font-medium text-sm text-zinc-200 truncate pr-2">{task.title}</div>
                           </div>
-                          <div className="text-xs font-bold text-yellow-600 bg-yellow-500/10 border border-yellow-500/20 px-2 py-1 rounded shrink-0">
-                              +{task.xpReward} XP
+                          <div className="flex items-center gap-2">
+                            {task.isCritical && (
+                                <span className="text-[10px] bg-red-500/10 text-red-500 border border-red-500/20 px-1.5 py-0.5 rounded" title="Критическая задача">!</span>
+                            )}
+                            <div className="text-xs font-bold text-yellow-600 bg-yellow-500/10 border border-yellow-500/20 px-2 py-1 rounded shrink-0">
+                                +{task.xpReward} XP
+                            </div>
                           </div>
                       </div>
                   )) : (
@@ -64055,9 +64903,13 @@ export default function QuestEditModal({ quest, onSave, onClose }: Props) {
     setFormData(quest);
   }, [quest]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev: any) => ({ ...prev, [name]: name === 'xpReward' ? Number(value) : value }));
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
+    setFormData((prev: any) => ({ 
+        ...prev, 
+        [name]: type === 'checkbox' ? checked : (name === 'xpReward' ? Number(value) : value) 
+    }));
   };
   
   const handleSubmit = (e: React.FormEvent) => {
@@ -64072,35 +64924,84 @@ export default function QuestEditModal({ quest, onSave, onClose }: Props) {
           <h2 className="text-lg font-semibold mb-4">Редактор Задачи</h2>
           <div className="space-y-4">
             <div>
-              <label className="text-sm">Название</label>
-              <input type="text" name="title" value={formData.title} onChange={handleChange} className="w-full mt-1 input-style" />
+              <label className="text-xs text-zinc-400">Название</label>
+              <input type="text" name="title" value={formData.title} onChange={handleChange} className="w-full mt-1 input-style" required />
             </div>
-             <div>
-              <label className="text-sm">Категория (Этап)</label>
-              <input type="text" name="stage" value={formData.stage} onChange={handleChange} className="w-full mt-1 input-style" />
+            
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                   <label className="text-xs text-zinc-400">Этап (Stage)</label>
+                   <input type="text" name="stage" value={formData.stage} onChange={handleChange} className="w-full mt-1 input-style" list="stages" />
+                   <datalist id="stages">
+                       <option value="Подготовка" />
+                       <option value="Документы" />
+                       <option value="Виза" />
+                       <option value="Экзамены" />
+                   </datalist>
+                </div>
+                <div>
+                   <label className="text-xs text-zinc-400">Опыт (XP)</label>
+                   <input type="number" name="xpReward" value={formData.xpReward} onChange={handleChange} className="w-full mt-1 input-style" />
+                </div>
             </div>
+
             <div>
-              <label className="text-sm">Описание</label>
+               <label className="text-xs text-zinc-400">Тип сдачи</label>
+               <select name="submissionType" value={formData.submissionType || 'text'} onChange={handleChange} className="w-full mt-1 input-style appearance-none">
+                   <option value="text">Текст</option>
+                   <option value="file">Файл (PDF/Img)</option>
+                   <option value="link">Ссылка</option>
+                   <option value="none">Без ответа (Чекбокс)</option>
+                   <option value="credentials">Доступы (Логин/Пароль)</option>
+               </select>
+            </div>
+
+            <div>
+               <label className="text-xs text-zinc-400">Дедлайн (текст или смещение)</label>
+               <input 
+                   type="text" 
+                   name="deadline" 
+                   value={formData.deadline || ''} 
+                   onChange={handleChange} 
+                   className="w-full mt-1 input-style" 
+                   placeholder="Напр: 2026-05-01 или +30 дней" 
+               />
+            </div>
+
+            <div>
+              <label className="text-xs text-zinc-400">Описание</label>
               <textarea name="description" value={formData.description} onChange={handleChange} rows={4} className="w-full mt-1 input-style" />
             </div>
-            <div>
-              <label className="text-sm">Опыт (XP)</label>
-              <input type="number" name="xpReward" value={formData.xpReward} onChange={handleChange} className="w-full mt-1 input-style" />
+
+            <div className="flex items-center gap-3 p-3 bg-zinc-800/50 rounded-lg border border-zinc-800">
+               <input 
+                   type="checkbox" 
+                   name="isCritical" 
+                   id="isCritical"
+                   checked={formData.isCritical || false} 
+                   onChange={handleChange} 
+                   className="w-4 h-4 rounded border-zinc-600 bg-zinc-700 text-red-600 focus:ring-red-500" 
+               />
+               <label htmlFor="isCritical" className="text-sm select-none cursor-pointer text-zinc-300">
+                   Критическая задача (блокирует прогресс)
+               </label>
             </div>
+
           </div>
           <div className="flex justify-end gap-3 mt-6">
-            <button type="button" onClick={onClose} className="btn">Отмена</button>
+            <button type="button" onClick={onClose} className="btn bg-zinc-800 hover:bg-zinc-700 text-zinc-300">Отмена</button>
             <button type="submit" className="btn btn-primary">Сохранить</button>
           </div>
         </form>
       </div>
       <style jsx>{`
         .input-style {
-          border-radius: 0.75rem;
-          border: 1px solid #52525b; /* zinc-600 */
+          border-radius: 0.5rem;
+          border: 1px solid #3f3f46; /* zinc-700 */
           padding: 0.5rem 0.75rem;
-          background-color: #27272a; /* zinc-800 */
+          background-color: #18181b; /* zinc-900 */
           color: white;
+          font-size: 0.875rem;
         }
         .input-style:focus {
           outline: 2px solid #3b82f6; /* blue-500 */
@@ -64219,10 +65120,12 @@ export default function QuestEditor({ profile, countryName, flagIcon, apiSave, a
                     </div>
                     
                     <div className="flex items-center gap-3 relative z-10">
+                        <div className="text-zinc-600 text-xs" title={quest.submissionType}>
+                           {quest.submissionType === 'file' ? '📄' : quest.submissionType === 'link' ? '🔗' : quest.submissionType === 'none' ? '☑️' : '📝'}
+                        </div>
                         <div className="text-xs font-bold text-yellow-600 bg-yellow-500/10 border border-yellow-500/20 px-2 py-1 rounded">
                             +{quest.xpReward} XP
-                        </div>
-                        
+                        </div>                        
                         {/* Actions overlay */}
                         <div className="absolute right-0 top-1/2 -translate-y-1/2 flex gap-1 bg-zinc-900 pl-2 opacity-0 group-hover:opacity-100 transition-opacity">
                              <button 
@@ -64241,6 +65144,7 @@ export default function QuestEditor({ profile, countryName, flagIcon, apiSave, a
                             </button>
                         </div>
                     </div>
+
                 </div>
                 ))}
             </div>
@@ -64403,6 +65307,8 @@ export default function ConfiguratorPage() {
   
   const [isProgramModalOpen, setIsProgramModalOpen] = useState(false);
   const [activeUniversityIdForCreate, setActiveUniversityIdForCreate] = useState<string | null>(null);
+  const [isCountryModalOpen, setIsCountryModalOpen] = useState(false); // Для создания страны
+
 
   // Инициализация страны (выбираем первую по умолчанию)
   useEffect(() => {
@@ -64495,6 +65401,21 @@ export default function ConfiguratorPage() {
     await refreshData();
   };
 
+  // Создание страны
+  const handleCreateCountry = async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      const formData = new FormData(e.currentTarget);
+      const token = localStorage.getItem("accessToken");
+      await fetch(`${API_URL}/admin/countries`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ id: formData.get("id"), name: formData.get("name"), flagIcon: formData.get("flag") })
+      });
+      await refreshData();
+      setIsCountryModalOpen(false);
+  };
+
+
   return (
     <div className="flex flex-col h-[calc(100vh-6rem)]">
       <div className="mb-4 shrink-0">
@@ -64532,10 +65453,14 @@ export default function ConfiguratorPage() {
             </ul>
           </div>
           <div className="p-2 border-t border-zinc-100 dark:border-zinc-800">
-            <button className="w-full py-2 border border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-zinc-500 hover:border-blue-500 hover:text-blue-500 transition">
+            <button 
+                onClick={() => setIsCountryModalOpen(true)}
+                className="w-full py-2 border border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-zinc-500 hover:border-blue-500 hover:text-blue-500 transition"
+            >
                 + Добавить страну
             </button>
           </div>
+
         </div>
 
         {/* Колонка 2: Университеты (Центральная область) */}
@@ -64607,8 +65532,36 @@ export default function ConfiguratorPage() {
             onClose={() => setIsProgramModalOpen(false)}
         />
       )}
+
+      {isCountryModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+            <div className="card w-full max-w-sm p-6 bg-zinc-900">
+                <h3 className="text-lg font-bold mb-4">Новая страна</h3>
+                <form onSubmit={handleCreateCountry} className="space-y-3">
+                    <div>
+                        <label className="text-xs text-zinc-500">ID (slug)</label>
+                        <input name="id" required className="w-full p-2 bg-zinc-800 rounded border border-zinc-700" placeholder="e.g. fr" />
+                    </div>
+                    <div>
+                        <label className="text-xs text-zinc-500">Название</label>
+                        <input name="name" required className="w-full p-2 bg-zinc-800 rounded border border-zinc-700" placeholder="France" />
+                    </div>
+                    <div>
+                        <label className="text-xs text-zinc-500">Флаг (Emoji)</label>
+                        <input name="flag" required className="w-full p-2 bg-zinc-800 rounded border border-zinc-700" placeholder="🇫🇷" />
+                    </div>
+                    <div className="flex gap-2 justify-end mt-4">
+                        <button type="button" onClick={() => setIsCountryModalOpen(false)} className="btn text-xs">Отмена</button>
+                        <button type="submit" className="btn btn-primary text-xs">Создать</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+      )}
     </div>
   );
+
+
 }
 --- END FILE: apps/web/app/curator/admin/countries/page.tsx ---
 
@@ -67088,7 +68041,7 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
     if (!email || !password) {
-      setError("Введите email и пароль");
+      setError("Please enter email and password");
       return;
     }
     try {
@@ -67102,52 +68055,88 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black flex items-center justify-center">
-      <div className="w-full max-w-sm rounded-2xl shadow p-8 bg-white dark:bg-zinc-900">
-        <div className="pt-4 mt-2">
-          <h2 className="text-sm font-semibold mb-2 text-zinc-800 dark:text-zinc-100">
-            Вход в систему
-          </h2>
-          <form className="space-y-4" onSubmit={handleLogin}>
-            <div>
-              <label className="block text-xs text-zinc-500 mb-1">Email</label>
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-black selection:bg-indigo-500/30">
+      {/* Abstract Background Gradients */}
+      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-purple-600/20 rounded-full blur-[120px]" />
+      <div className="absolute bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-blue-600/20 rounded-full blur-[100px]" />
+
+      {/* Glassmorphism Card */}
+      <div className="relative w-full max-w-md p-1">
+        <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-white/5 rounded-3xl blur-sm" />
+        <div className="relative bg-zinc-900/60 backdrop-blur-xl border border-white/10 shadow-2xl rounded-3xl p-8 sm:p-10">
+
+          <div className="text-center mb-10">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
+              Welcome Back
+            </h1>
+            <p className="text-zinc-400 text-sm mt-3">
+              Enter your credentials to continue your journey
+            </p>
+          </div>
+
+          <form className="space-y-6" onSubmit={handleLogin}>
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-zinc-300 uppercase tracking-wider ml-1">Email</label>
               <input
                 type="email"
                 required
-                className="w-full rounded-xl border px-3 py-2 bg-white dark:bg-zinc-800"
+                className="w-full bg-zinc-800/50 border border-white/5 rounded-xl px-4 py-3 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-transparent transition-all"
+                placeholder="name@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
-            <div>
-              <label className="block text-xs text-zinc-500 mb-1">Пароль</label>
+
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-zinc-300 uppercase tracking-wider ml-1">Password</label>
               <input
                 type="password"
                 required
-                className="w-full rounded-xl border px-3 py-2 bg-white dark:bg-zinc-800"
+                className="w-full bg-zinc-800/50 border border-white/5 rounded-xl px-4 py-3 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-transparent transition-all"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-             
+
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-2xl py-2.5 font-medium bg-black text-white dark:bg-white dark:text-black disabled:opacity-50 transition"
+              className="w-full relative group overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 p-[1px] shadow-lg shadow-indigo-500/20 transition-all hover:shadow-indigo-500/40 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {loading ? "Вход..." : "Войти"}
+              <div className="relative bg-zinc-900/0 group-hover:bg-white/5 transition-colors rounded-xl h-full px-6 py-3.5">
+                <span className="font-semibold text-white tracking-wide">
+                  {loading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Signing in...
+                    </span>
+                  ) : (
+                    "Sign In"
+                  )}
+                </span>
+              </div>
             </button>
           </form>
+
           {error && (
-            <p className="mt-3 text-xs text-red-500 text-center">
-              {error}
-            </p>
+            <div className="mt-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 backdrop-blur-sm">
+              <p className="text-xs text-red-200 text-center font-medium">
+                {error}
+              </p>
+            </div>
           )}
-          <div className="mt-6 text-center text-xs text-zinc-500">
-            Нет аккаунта?{" "}
-            <Link href="/register" className="text-blue-500 hover:underline">
-              Зарегистрироваться
-            </Link>
+
+          <div className="mt-8 text-center">
+            <p className="text-xs text-zinc-500">
+              Don't have an account?{" "}
+              <Link href="/register" className="text-indigo-400 hover:text-indigo-300 font-medium hover:underline transition-colors">
+                Create Account
+              </Link>
+            </p>
           </div>
         </div>
       </div>
@@ -67481,7 +68470,7 @@ export default function Dashboard() {
 "use client";
 import { useCountry } from "@/shared/CountryContext";
 import { useProgress } from "@/shared/ProgressContext";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 export default function FolderPage() {
   const { documents, selectedCountry, quests } = useCountry();
@@ -67498,10 +68487,10 @@ export default function FolderPage() {
     // Сопоставляем Task (из БД) с QuestTemplate (из JSON) по названию,
     // так как ID у них разные.
     doneTasks.forEach((task) => {
-        const template = quests.find(q => q.title === task.title);
-        if (template && template.links_to_document_id) {
-            doneDocIds.add(template.links_to_document_id);
-        }
+      const template = quests.find(q => q.title === task.title);
+      if (template && template.links_to_document_id) {
+        doneDocIds.add(template.links_to_document_id);
+      }
     });
 
     return doneDocIds;
@@ -67512,8 +68501,37 @@ export default function FolderPage() {
   const required = new Set(selectedCountry.required_document_ids);
   const filtered = documents.filter((d) => required.has(d.id) && completedDocumentIds.has(d.id));
 
-  const handleDownload = () => {
-    alert("Имитация скачивания архива. В реальном приложении здесь будет логика для создания и скачивания ZIP-файла.");
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    try {
+      setIsDownloading(true);
+      const token = localStorage.getItem("accessToken");
+      const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
+
+      const res = await fetch(`${API_URL}/tasks/download-zip`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (!res.ok) throw new Error("Failed to download");
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = "documents.zip";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      alert("Не удалось скачать архив. Попробуйте позже.");
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
@@ -67525,8 +68543,12 @@ export default function FolderPage() {
             Здесь хранятся все готовые и проверенные документы.
           </p>
         </div>
-        <button className="btn btn-primary" onClick={handleDownload} disabled={filtered.length === 0}>
-          Скачать архивом
+        <button
+          className="btn btn-primary"
+          onClick={handleDownload}
+          disabled={filtered.length === 0 || isDownloading}
+        >
+          {isDownloading ? 'Скачивание...' : 'Скачать архивом'}
         </button>
       </div>
       {filtered.length === 0 ? (
@@ -69536,8 +70558,6 @@ test.describe('Authentication Flow', () => {
 --- END FILE: apps/web/tsconfig.json ---
 
 --- BEGIN FILE: docker-compose.override.yml ---
-version: "3.9"
-
 services:
   api:
     command: npm run start:dev
@@ -69556,8 +70576,6 @@ services:
 --- END FILE: docker-compose.override.yml ---
 
 --- BEGIN FILE: docker-compose.yml ---
-version: "3.9"
-
 services:
   abbit-db:
     image: postgres:15-alpine
@@ -69631,6 +70649,769 @@ volumes:
   postgres_data:
   minio_data:
 --- END FILE: docker-compose.yml ---
+
+--- BEGIN FILE: docs/epics-stories.md ---
+# Abbit - Epics & User Stories
+
+**Based on:** docs/prd.md
+**Status:** Ready for Development
+
+---
+
+## Epic 1: SaaS Foundation & Identity
+**Goal:** Establish a secure, multi-tenant environment where agencies manage their own users and data in isolation.
+
+| ID | User Story | Acceptance Criteria |
+|----|------------|---------------------|
+| **US1.1** | As a **User**, I want to log in using my email and password so I can access the system. | - JWT issued upon success<br>- Error message for invalid creds<br>- Redirect to approp. dashboard |
+| **US1.2** | As a **Tenant Admin**, I want to ensure my data is invisible to other companies. | - API enforces `companyId` filter on ALL queries<br>- Users cannot access resources of other tenants |
+| **US1.3** | As a **System**, I want to handle roles (Student, Curator, Admin) so users see only what they need. | - Guards/Decorators in NestJS for Roles<br>- UI hides unauthorized menu items |
+
+---
+
+## Epic 2: The Student Quest (Gamified Journey)
+**Goal:** Transform the student's admission process into an engaging, roadmap-driven experience.
+
+| ID | User Story | Acceptance Criteria |
+|----|------------|---------------------|
+| **US2.1** | As a **Student**, I want to see a Task Matrix (Roadmap) so I know exactly what steps are required. | - List of tasks ordered by phase<br>- "Locked" vs "Unlocked" states tailored by Camunda |
+| **US2.2** | As a **Student**, I want to use a Kanban Board to track my progress. | - Columns: Todo, Review, Done<br>- Drag and drop disabled (state managed by system flows) |
+| **US2.3** | As a **Student**, I want to upload documents (PDF/Img) for a task so I can submit my work. | - File picker with type validation<br>- Upload progress bar<br>- Preview of uploaded file |
+| **US2.4** | As a **Student**, I want to "Submit" a task for review so I can move to the next step. | - Button active only if file uploaded<br>- Task status changes to "Review" |
+| **US2.5** | As a **Student**, I want to earn XP and see my Avatar level up so I feel rewarded. | - XP animation on "Task Approved"<br>- Progress bar to next level<br>- Avatar visual changes |
+| **US2.6** | As a **Student**, I want to download all my approved docs as a ZIP so I have a backup. | - Single click download<br>- Contains only "Done" files |
+
+---
+
+## Epic 3: Curator Command Center
+**Goal:** Enable curators to efficiently manage multiple students and review submissions quickly.
+
+| ID | User Story | Acceptance Criteria |
+|----|------------|---------------------|
+| **US3.1** | As a **Curator**, I want to see a list of my assigned students with "Risk" indicators. | - Filterable table<br>- Progress % shown<br>- Red flag if deadline near/missed |
+| **US3.2** | As a **Curator**, I want a global "Review Inbox" so I can see all pending work in one place. | - List of all tasks in "Review" status across my students |
+| **US3.3** | As a **Curator**, I want to Approve a submission. | - Moves task to "Done"<br>- Triggers XP award<br>- Notifies student |
+| **US3.4** | As a **Curator**, I want to Reject a submission with a comment. | - Mandatory text field for reason<br>- Moves task to "Todo"<br>- Student sees comment highlighted |
+
+---
+
+## Epic 4: Administration & Content
+**Goal:** Allow admins to configure the admission logic and master data.
+
+| ID | User Story | Acceptance Criteria |
+|----|------------|---------------------|
+| **US4.1** | As an **Admin**, I want to manage Universities and Countries. | - CRUD operations for reference data |
+| **US4.2** | As an **Admin**, I want to create Task Templates linked to BPMN IDs. | - Editor to define Title, Desc, XP value, and Camunda Activity ID |
+| **US4.3** | As an **Admin**, I want to onboard new Curators. | - Invite/Create account flow |
+
+---
+
+## Epic 5: System Integrations
+**Goal:** Connect the web platform to external engines (process, storage, messaging).
+
+| ID | User Story | Acceptance Criteria |
+|----|------------|---------------------|
+| **US5.1** | As a **System**, I want to sync task status with Camunda. | - Complete user task in Camunda when Curator approves<br>- Create new DB task when Camunda process reaches user task |
+| **US5.2** | As a **Student**, I want to link my Telegram account. | - "Get Binding Code" button in Profile<br>- Send code to Bot to link `chat_id` |
+| **US5.3** | As a **Parent**, I want to receive Telegram notifications about my child's progress. | - Notifications on: Submission, Approval, Rejection, Deadline |
+| **US5.4** | As a **System**, I want to store files securely in MinIO. | - Uploads go to bucket `{companyId}/{studentId}/...`<br>- Access only via signed URLs |
+--- END FILE: docs/epics-stories.md ---
+
+--- BEGIN FILE: docs/external_database_setup.md ---
+# External Database Configuration Guide
+
+This guide explains how to connect the Abbit API to an external PostgreSQL database (e.g., AWS RDS, DigitalOcean Managed Database, Supabase, Neon).
+
+## 1. Prerequisites
+- A running PostgreSQL database (Version 15+ recommended).
+- Connection details: Host, Port, Database Name, Username, Password.
+- Allow-list IP configured (if your provider requires it) to allow access from your deployment server.
+
+## 2. Configuration Steps
+
+The application uses the `DATABASE_URL` environment variable to connect to the database.
+
+1.  Open or create the `.env` file in `apps/api/`.
+2.  Locate or add the `DATABASE_URL` variable.
+3.  Set the value using the following connection string format:
+
+```bash
+DATABASE_URL="postgresql://[USER]:[PASSWORD]@[HOST]:[PORT]/[DATABASE]"
+```
+
+### Examples
+
+**Standard Connection:**
+```bash
+DATABASE_URL="postgresql://admin:supersecret@db.example.com:5432/abbit_prod"
+```
+
+**With SSL (Required by many cloud providers):**
+Append `?sslmode=require` (or `no-verify` if using self-signed certs) to the end of the URL.
+```bash
+DATABASE_URL="postgresql://admin:supersecret@db.example.com:5432/abbit_prod?sslmode=require"
+```
+
+**Supabase (Transaction Pooler):**
+Supabase often provides a transaction pooler on port 6543.
+```bash
+DATABASE_URL="postgresql://postgres.projectid:password@aws-0-eu-central-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
+```
+
+## 3. Migrating Data (Optional)
+
+If you have existing data in your local Docker database and want to move it to the external cloud database, follow these steps.
+
+### Step 3.1: Export Local Data
+Run this command to create a backup file (`dump.sql`) from your running local container:
+
+```bash
+docker exec -t abbit-db pg_dump -U postgres -d abbit --clean --if-exists > dump.sql
+```
+*Note: `abbit-db` is the container name defined in docker-compose.yml.*
+
+### Step 3.2: Import to External Database
+Use `psql` to restore the backup to your new external database.
+
+```bash
+# General Syntax
+psql "[Your External DATABASE_URL]" < dump.sql
+
+# Example
+psql "postgresql://admin:password@remote-db.com:5432/abbit_prod?sslmode=require" < dump.sql
+```
+
+## 4. Verification
+
+1.  Update the `.env` file with your new `DATABASE_URL`.
+2.  Restart the application:
+    ```bash
+    # If running with docker-compose
+    docker-compose down
+    docker-compose up -d api
+
+    # If running locally with npm
+    cd apps/api
+    npm run start:dev
+    ```
+3.  Check the logs. You should see a successful TypeORM connection message and no errors regarding connection timeouts.
+
+## 5. Troubleshooting
+
+-   **Connection Refused**: Check your database firewall / security groups. Ensure your current IP is whitelisted.
+-   **SSL Error**: Try adding `?sslmode=require` or `?sslmode=no-verify` to the connection string.
+-   **Schema Sync**: The application is currently configured with `synchronize: true`. This will automatically create tables in your new empty database on the first run. **WARNING**: In production, it is recommended to disable this and use migrations.
+--- END FILE: docs/external_database_setup.md ---
+
+--- BEGIN FILE: docs/prd.md ---
+# Abbit - Product Requirements Document
+
+**Author:** BMad PM
+**Date:** 2026-01-01
+**Version:** 1.0
+**Source Document:** docs/project-brief.md
+
+---
+
+## Executive Summary
+
+Abbit is a comprehensive SaaS platform designed to gamify and streamline the university admission process for study abroad agencies. It replaces chaotic communication channels with a structured, centralized "Quest" system.
+
+### What Makes This Special
+
+**Gamified Bureaucracy ("RPG Life"):** The core differentiator is transforming the tedious admission process into an engaging RPG experience where students help their "Avatar" progress by completing real-world tasks (uploading docs, filling forms). This is powered by a robust **Camunda BPMN** engine and protected by strict **Multi-Tenant SaaS** isolation.
+
+---
+
+## Project Classification
+
+**Technical Type:** SaaS B2B (Web Platform)
+**Domain:** EdTech (Admissions)
+**Complexity:** Medium/High
+
+### Domain Context
+
+As an EdTech platform handling student data, **Privacy** and **Clarity** are paramount. The system serves three distinct personas (Student, Curator, Parent) who need different views of the same data. The "Agency" model requires strict data isolation (Multi-tenancy).
+
+---
+
+## Success Criteria
+
+### Measures of Success
+1.  **Functional Adoption:** Agencies successfully onboard students who complete the full admission cycle via the platform.
+2.  **Engagement:** Students actively interact with the Avatar/XP system, reducing "dropout" or procrastination.
+3.  **Operational Efficiency:** Curators spend less time answering "what's next?" and more time on high-value guidance.
+
+### Business Metrics (KPIs)
+-   **Task Completion Rate:** % of tasks completed on schedule.
+-   **Review Turnaround:** Average time from Submission -> Review Decision.
+-   **Daily Active Users (DAU):** Student engagement monitoring.
+
+---
+
+## Product Scope
+
+### MVP - Minimum Viable Product
+1.  **Multi-Tenant Auth:** Secure login for Students, Curators, Admins with Company isolation.
+2.  **Student Quest Dashboard:** Kanban board, Task Matrix, File Uploads, XP/Avatar display.
+3.  **Curator Command Center:** Student list, Review Inbox, Approval/Rejection flow.
+4.  **Admin Tools:** Management of University/Country data and Task Templates.
+5.  **Notifications:** Telegram Bot integration for status updates.
+6.  **Core Integrations:** MinIO (Storage), Camunda (Process Engine).
+
+### Growth Features (Post-MVP)
+-   Self-service registration for new Agencies/Parents.
+-   Billing and Subscription management.
+-   In-app real-time chat (replacing task comments).
+-   Mobile Native App.
+
+### Vision (Future)
+-   AI-driven university recommendations.
+-   Global marketplace for universities.
+
+---
+
+## Domain-Specific Requirements (EdTech/SaaS)
+
+1.  **Data Isolation (Privacy):** Student data must never leak between Agencies (Tenants).
+2.  **Auditability:** Every document submission and review decision must be logged (Process history).
+3.  **Clarity:** Instructions must be unambiguous to reduce anxiety for teenage applicants.
+
+---
+
+## Functional Requirements
+
+### User Management & Security
+-   **FR1:** Users (Student, Curator, Admin) can log in via email and password using secure authentication.
+-   **FR2:** System must enforce **Tenancy Isolation**, ensuring users only access data within their `companyId`.
+-   **FR3:** System must enforce **Role-Based Access Control (RBAC)** for Student, Curator, and Admin flows.
+-   **FR4:** Students can link their Telegram account via a "Binding Code" to receive notifications.
+
+### Student Experience ("The Quest")
+-   **FR5:** Students can view a **Task Matrix** (Roadmap) tailored to their Country/Program selection.
+-   **FR6:** Students can view tasks on a **Kanban Board** categorized by status (Todo, Review, Done).
+-   **FR7:** Students can view detailed instructions for a specific Task.
+-   **FR8:** Students can **upload documents/files** to a customized "Submission" area for a task.
+-   **FR9:** Students can **submit** a task for review once requirements are met.
+-   **FR10:** Students receive **XP (Experience Points)** automatically upon task completion (Review Approval).
+-   **FR11:** Students can view their **Avatar** and its current level/customization based on XP.
+-   **FR12:** Students can download a "My Folder" archive of all approved documents.
+
+### Curator Experience ("The Guide")
+-   **FR13:** Curators can view a searchable/filterable list of **Students assigned to them**.
+-   **FR14:** Curators can view a **Review Inbox** showing all pending task submissions.
+-   **FR15:** Curators can **Approve** a submission, which unlocks the next process step for the student.
+-   **FR16:** Curators can **Reject** a submission with a mandatory **Comment/Reason**, returning the task to "Todo".
+-   **FR17:** Curators can view a student's progress bar and "Risk" indicators (e.g., missed deadlines).
+
+### Admin & Content
+-   **FR18:** Admins can manage global data: **Universities**, **Countries**, and **Programs**.
+-   **FR19:** Admins can create and edit **Task Templates** (linking to BPMN steps).
+-   **FR20:** Admins can manage Curator accounts and assign them to students.
+
+### System Behaviors
+-   **FR21:** System triggers **Telegram Notifications** to Student (and linked Parent) upon Review outcomes.
+-   **FR22:** System integrates with **Camunda** to orchestrate task availability (e.g., Task B only opens after Task A is Done).
+-   **FR23:** System stores all file uploads securely in **MinIO** with presigned URL access.
+-   **FR24:** System validates file types and sizes during upload.
+
+---
+
+## Non-Functional Requirements
+
+### User Experience (Aesthetics)
+-   **NFR1:** The interface must feature a **Premium, "Wow" Design** with vibrant colors, glassmorphism, and dark mode support.
+-   **NFR2:** Transitions and interactions (especially Avatar updates and Kanban moves) must be smooth and animated.
+
+### Performance & Scalability
+-   **NFR3:** Dashboard load time should be under **1.5 seconds** (p95).
+-   **NFR4:** System must support horizontal scaling for the API and Consumers to handle peak admission seasons.
+
+### Security
+-   **NFR5:** All API requests must be validated with JWTs containing `userId` and `companyId`.
+-   **NFR6:** File access must be strictly controlled via short-lived presigned URLs.
+
+---
+
+## Innovation & Novel Patterns
+**Bureaucracy as a Game:** By treating document collection as a "Quest" with tangible rewards (XP, Avatar items), we flip the emotional context from "Stress" to "Achievement".
+--- END FILE: docs/prd.md ---
+
+--- BEGIN FILE: docs/project-brief.md ---
+# Project Brief: Abbit (Student Admission System)
+
+**Date:** 2026-01-01
+**Author:** BMad Analyst
+**Context:** MVP Development / SaaS Platform
+
+---
+
+## Executive Summary
+
+**Abbit** is a comprehensive web platform designed to streamline and gamify the university admission process for students applying abroad. It replaces scattered communication channels (chats, spreadsheets) with a centralized system that offers clear roadmaps (Tasks/Quests), document management, and progress tracking.
+
+The system is built as a multi-company SaaS platform, servicing education agencies. It empowers **Students** with a clear path and gamified motivation (XP, Avatars), provides **Curators** with efficient management tools, and offers **Parents** visibility via Telegram integration.
+
+---
+
+## Core Vision
+
+### Problem Statement
+Currently, the admission process is chaotic, characterized by:
+*   **Disorganized Communication:** Information is scattered across various messengers, emails, and files.
+*   **Lack of Transparency:** Students lack a clear understanding of their roadmap, progress, and upcoming deadlines.
+*   **Management Overhead:** Curators struggle to track multiple students effectively without a unified dashboard.
+*   **Low Engagement:** The routine process of document collection is tedious and demotivating for applicants.
+
+### Proposed Solution
+A **Gamified Task-Based Web Platform** that serves as a single source of truth:
+*   **For Students:** An interacting "Quest" system where admission steps are tasks. Completing tasks earns XP and unlocks avatar customization.
+*   **For Curators:** A dashboard to monitor student progress, review submissions (docs, links), and manage deadlines.
+*   **Process Automation:** Integration with **Camunda BPMN** to orchestrate workflows (e.g., Registration, Onboarding).
+*   **SaaS Architecture:** Built solely for scalability with multi-tenant support (Company isolation) from Day 1.
+
+### Key Differentiators
+1.  **Gamification:** Transforming bureaucracy into an RPG-like experience (XP for tasks, fully customizable Avatars).
+2.  **Process-Driven:** Powered by a BPMN engine (Camunda) for flexible process logic managed via API.
+3.  **Strict Isolation:** Multi-company architecture allowing multiple agencies to use the platform securely.
+4.  **Telegram Integration:** "Binding code" system to link Telegram groups for notifications (Deadlines, Reviews) for Students and Parents.
+
+---
+
+## Target Users
+
+### Primary Users
+1.  **Student (The Player):**
+    *   **Needs:** Clear instructions, visual progress, motivation, centralized document storage.
+    *   **Workflow:** Log in -> Check Dashboard -> specific "Tasks" (Upload doc/Fill form) -> Wait for Review -> Earn XP.
+2.  **Curator (The Guide):**
+    *   **Needs:** Overview of all assigned students, quick review interface, deadline alerts.
+    *   **Workflow:** Dashboard -> Review Inbox (Approve/Reject submissions) -> Communication via comments.
+
+### Secondary Users
+*   **Company Admin:** Manages curators, university databases, and task templates.
+*   **Parent (Observer):** No direct login in MVP, but receives status updates and alerts via a linked Telegram group.
+
+---
+
+## Success Metrics
+
+### MVP Success Criteria
+*   **Functional Core:** Successful registration, task generation, submission, and review cycle.
+*   **Engagement:** Students customizing avatars and actively tracking XP.
+*   **Efficiency:** Reduction in "What do I do next?" questions to curators.
+*   **Stability:** Robust handling of file uploads (MinIO) and BPMN process states.
+
+### Key Performance Indicators (KPIs)
+*   **Task Completion Rate:** % of tasks completed on time.
+*   **Review Turnaround:** Time taken for a curator to review a submission.
+*   **User Retention:** Daily Active Users (DAU) among active applicants.
+
+---
+
+## MVP Scope
+
+### Core Features
+1.  **Auth & Profiles:**
+    *   Role-based access (Student, Curator, Admin).
+    *   Multi-company isolation features.
+2.  **Student Dashboard:**
+    *   **Task Matrix:** Auto-generated tasks based on Country/Program selection.
+    *   **Kanban Board:** Visual status of tasks (Todo, Review, Done).
+    *   **My Folder:** Collected documents ready for download.
+    *   **Gamification:** XP logic (1000 XP scale) and Avatar rendering.
+3.  **Curator Dashboard:**
+    *   Student list with progress bars and risk indicators.
+    *   Global Review Inbox for quick task approval/rejection.
+4.  **Admin Panel:**
+    *   Management of Countries, Universities, and Programs.
+    *   Task Template editor.
+5.  **Notifications:**
+    *   Telegram Bot integration for deadline warnings and status updates.
+
+### Out of Scope for MVP
+*   Self-registration for Parents/Companies (Manual creation only).
+*   In-app chat (Use comments on tasks + Telegram).
+*   Billing/Subscription management for Companies.
+*   Complex individual timezone management (Default: Asia/Almaty).
+*   Native Mobile App (Responsive Web App only).
+
+---
+
+## Technical Preferences
+
+*   **Frontend:** Next.js (App Router), TypeScript, Tailwind CSS, Zustand.
+*   **Backend:** NestJS (Modular Monolith), Prisma ORM.
+*   **Database:** PostgreSQL.
+*   **Process Engine:** Camunda (via REST).
+*   **Storage:** MinIO (S3 compatible).
+*   **Infrastructure:** Docker + Docker Compose.
+
+---
+
+## Timeline & Resources
+
+*   **Total Duration:** 8 Weeks (estimated from TZ).
+    *   **Weeks 1-2:** Analytics, Design (Figma), Core Backend setup.
+    *   **Weeks 3-4:** Backend Core (Tasks, Students) & API.
+    *   **Weeks 5-6:** Frontend Student Area.
+    *   **Weeks 7-8:** Frontend Curator/Admin Area, Integration, Testing.
+
+---
+_Generated based on technical specification "tz.md"._
+--- END FILE: docs/project-brief.md ---
+
+--- BEGIN FILE: docs/stories/US1.1-login.md ---
+# US1.1: User Login
+
+**Epic:** SaaS Foundation & Identity
+**Status:** In Progress
+
+## Description
+As a **User**, I want to log in using my email and password so I can access the system.
+
+## Acceptance Criteria
+- [ ] User can authenticate with valid email and password
+- [ ] System issues a JWT upon successful login
+- [ ] System displays an error message for invalid credentials
+- [ ] User is redirected to the appropriate dashboard based on their role after login
+
+## In Scope
+- JWT generation and validation
+- Basic email/password check against DB (User entity)
+- Role guard payload in JWT
+- Frontend Login Page with error handling
+- Redirection logic
+
+## Out of Scope
+- Registration (handled in Admin onboarding or separate story)
+- Forgot Password
+- 2FA
+
+## Tasks/Subtasks
+
+### Backend (apps/api)
+- [x] **Setup Auth Module**: Create `AuthModule`, `AuthService`, `AuthController`
+- [x] **Implement User Entity**: Define `User` entity with email, password (hashed), role, companyId
+- [x] **Implement Login Logic**: `validateUser` checks credentials; `login` returns JWT
+- [x] **Configure JWT Strategy**: Setup Passport JWT strategy
+- [x] **Add Role Guard**: Create `RolesGuard` and `@Roles` decorator (preparatory for US1.3 but needed for login redirection logic validation)
+
+### Frontend (apps/web)
+- [x] **Create Login Page**: `app/login/page.tsx` with Email/Password inputs
+- [x] **Implement API Integration**: Service/Function to call `POST /auth/login`
+- [x] **Handle Auth State**: Store JWT (in cookie/localStorage) and User info using Zustand
+- [x] **Implement Redirection**: Logic to route to `/dashboard` (Student) or `/admin` (Admin) based on role
+
+### Testing
+- [x] **Backend Unit Tests**: coverage for `AuthService`
+- [ ] **E2E Test**: `POST /auth/login` valid and invalid cases
+
+## Dev Agent Record
+
+### Debug Log
+- [ ] 
+
+### Completion Notes
+- [ ] 
+
+## File List
+- [ ] 
+
+## Change Log
+- [ ]
+--- END FILE: docs/stories/US1.1-login.md ---
+
+--- BEGIN FILE: docs/stories/US1.2-tenant-isolation.md ---
+# US1.2: Tenant Isolation
+
+**Epic:** SaaS Foundation & Identity
+**Status:** Open
+
+## Description
+As a **Tenant Admin**, I want to ensure my data is invisible to other companies.
+
+## Acceptance Criteria
+- [ ] API enforces `companyId` filter on ALL database queries
+- [ ] Users cannot access resources (students, tasks, files) belonging to other tenants
+- [ ] Access attempts to cross-tenant resources return 403 Forbidden or 404 Not Found
+--- END FILE: docs/stories/US1.2-tenant-isolation.md ---
+
+--- BEGIN FILE: docs/stories/US1.3-role-management.md ---
+# US1.3: Role Management
+
+**Epic:** SaaS Foundation & Identity
+**Status:** Open
+
+## Description
+As a **System**, I want to handle roles (Student, Curator, Admin) so users see only what they need.
+
+## Acceptance Criteria
+- [ ] Backend implements Guards/Decorators (e.g., in NestJS) to restrict endpoints by Role
+- [ ] UI conditionally renders menu items and views based on the logged-in user's role
+- [ ] Unauthorized access attempts to role-protected routes are blocked
+--- END FILE: docs/stories/US1.3-role-management.md ---
+
+--- BEGIN FILE: docs/stories/US2.1-task-matrix.md ---
+# US2.1: Student Task Matrix (Roadmap)
+
+**Epic:** The Student Quest (Gamified Journey)
+**Status:** Open
+
+## Description
+As a **Student**, I want to see a Task Matrix (Roadmap) so I know exactly what steps are required.
+
+## Acceptance Criteria
+- [ ] Display a list/matrix of tasks ordered by phase
+- [ ] Tasks show visually distinct states: "Locked", "Unlocked", "Done"
+- [ ] Task availability is driven by the backend (Camunda state)
+--- END FILE: docs/stories/US2.1-task-matrix.md ---
+
+--- BEGIN FILE: docs/stories/US2.2-kanban-board.md ---
+# US2.2: Student Kanban Board
+
+**Epic:** The Student Quest (Gamified Journey)
+**Status:** Open
+
+## Description
+As a **Student**, I want to use a Kanban Board to track my progress.
+
+## Acceptance Criteria
+- [ ] Kanban board displays columns: "Todo", "Review", "Done"
+- [ ] Tasks appear in the correct column based on their status
+- [ ] Drag and drop is DISABLED (state transitions are managed by specific actions, not dragging)
+--- END FILE: docs/stories/US2.2-kanban-board.md ---
+
+--- BEGIN FILE: docs/stories/US2.3-document-upload.md ---
+# US2.3: Document Upload
+
+**Epic:** The Student Quest (Gamified Journey)
+**Status:** Open
+
+## Description
+As a **Student**, I want to upload documents (PDF/Img) for a task so I can submit my work.
+
+## Acceptance Criteria
+- [ ] User can select a file to upload for a specific task
+- [ ] System validates file type (PDF, Images) and size
+- [ ] Upload progress bar is displayed
+- [ ] Uploaded file preview (or link) is shown after success
+--- END FILE: docs/stories/US2.3-document-upload.md ---
+
+--- BEGIN FILE: docs/stories/US2.4-submit-task.md ---
+# US2.4: Submit Task
+
+**Epic:** The Student Quest (Gamified Journey)
+**Status:** Open
+
+## Description
+As a **Student**, I want to "Submit" a task for review so I can move to the next step.
+
+## Acceptance Criteria
+- [ ] "Submit" button is active ONLY if required files are uploaded
+- [ ] Clicking Submit changes task status to "Review"
+- [ ] Task becomes read-only for the student while in Review
+--- END FILE: docs/stories/US2.4-submit-task.md ---
+
+--- BEGIN FILE: docs/stories/US2.5-xp-avatar.md ---
+# US2.5: XP & Avatar Rewards
+
+**Epic:** The Student Quest (Gamified Journey)
+**Status:** Open
+
+## Description
+As a **Student**, I want to earn XP and see my Avatar level up so I feel rewarded.
+
+## Acceptance Criteria
+- [ ] XP is awarded when a task is Approved
+- [ ] UI shows XP gain animation
+- [ ] Progress bar updates towards the next level
+- [ ] Avatar visual changes or levels up based on total XP
+--- END FILE: docs/stories/US2.5-xp-avatar.md ---
+
+--- BEGIN FILE: docs/stories/US2.6-download-zip.md ---
+# US2.6: Download All Documents
+
+**Epic:** The Student Quest (Gamified Journey)
+**Status:** Open
+
+## Description
+As a **Student**, I want to download all my approved docs as a ZIP so I have a backup.
+
+## Acceptance Criteria
+- [ ] "Download All" button available in profile or dashboard
+- [ ] Generates a ZIP file containing all files from tasks with status "Done"
+- [ ] Download starts effectively within reasonable time
+--- END FILE: docs/stories/US2.6-download-zip.md ---
+
+--- BEGIN FILE: docs/stories/US3.1-curator-student-list.md ---
+# US3.1: Curator Student List & Risk Indicators
+
+**Epic:** Curator Command Center
+**Status:** Open
+
+## Description
+As a **Curator**, I want to see a list of my assigned students with "Risk" indicators.
+
+## Acceptance Criteria
+- [ ] List of assigned students is displayed
+- [ ] Table is filterable/sortable
+- [ ] Progress percentage is shown for each student
+- [ ] "Red flag" or risk indicator appears if a deadline is approaching or missed
+--- END FILE: docs/stories/US3.1-curator-student-list.md ---
+
+--- BEGIN FILE: docs/stories/US3.2-review-inbox.md ---
+# US3.2: Review Inbox
+
+**Epic:** Curator Command Center
+**Status:** Open
+
+## Description
+As a **Curator**, I want a global "Review Inbox" so I can see all pending work in one place.
+
+## Acceptance Criteria
+- [ ] Dashboard shows a "Review Inbox" section
+- [ ] Aggregates all tasks in "Review" status across all assigned students
+- [ ] Navigation allows clicking a task to view the submission details
+--- END FILE: docs/stories/US3.2-review-inbox.md ---
+
+--- BEGIN FILE: docs/stories/US3.3-approve-submission.md ---
+# US3.3: Approve Submission
+
+**Epic:** Curator Command Center
+**Status:** Open
+
+## Description
+As a **Curator**, I want to Approve a submission.
+
+## Acceptance Criteria
+- [ ] Curator can view uploaded file/submission
+- [ ] "Approve" action moves task status to "Done"
+- [ ] System automatically triggers XP award to student
+- [ ] Notification sent to student
+--- END FILE: docs/stories/US3.3-approve-submission.md ---
+
+--- BEGIN FILE: docs/stories/US3.4-reject-submission.md ---
+# US3.4: Reject Submission
+
+**Epic:** Curator Command Center
+**Status:** Open
+
+## Description
+As a **Curator**, I want to Reject a submission with a comment.
+
+## Acceptance Criteria
+- [ ] "Reject" action is available
+- [ ] Requiring a comment/reason is MANDATORY for rejection
+- [ ] Task status moves back to "Todo"
+- [ ] Student sees the rejection comment highlighted on the task
+--- END FILE: docs/stories/US3.4-reject-submission.md ---
+
+--- BEGIN FILE: docs/stories/US4.1-manage-uni-country.md ---
+# US4.1: Manage Reference Data (Universities/Countries)
+
+**Epic:** Administration & Content
+**Status:** Open
+
+## Description
+As an **Admin**, I want to manage Universities and Countries.
+
+## Acceptance Criteria
+- [ ] Admin dashboard provides interface to list, create, edit, delete Countries
+- [ ] Admin dashboard provides interface to list, create, edit, delete Universities
+- [ ] Data validation ensures required fields are present
+--- END FILE: docs/stories/US4.1-manage-uni-country.md ---
+
+--- BEGIN FILE: docs/stories/US4.2-task-templates.md ---
+# US4.2: Task Templates
+
+**Epic:** Administration & Content
+**Status:** Open
+
+## Description
+As an **Admin**, I want to create Task Templates linked to BPMN IDs.
+
+## Acceptance Criteria
+- [ ] Editor allows defining Task Title, Description, XP Value
+- [ ] Editor allows linking the template to a specific Camunda Activity ID (BPMN Task ID)
+- [ ] Attributes like "Document Required" (boolean) or "Deadline Offset" can be set
+--- END FILE: docs/stories/US4.2-task-templates.md ---
+
+--- BEGIN FILE: docs/stories/US4.3-onboard-curators.md ---
+# US4.3: Onboard Curators
+
+**Epic:** Administration & Content
+**Status:** Open
+
+## Description
+As an **Admin**, I want to onboard new Curators.
+
+## Acceptance Criteria
+- [ ] Admin can invite a Curator via email OR create an account directly
+- [ ] Curator account is assigned the correct Role
+- [ ] Curator can log in after account creation
+--- END FILE: docs/stories/US4.3-onboard-curators.md ---
+
+--- BEGIN FILE: docs/stories/US5.1-camunda-sync.md ---
+# US5.1: Camunda Synchronization
+
+**Epic:** System Integrations
+**Status:** Open
+
+## Description
+As a **System**, I want to sync task status with Camunda.
+
+## Acceptance Criteria
+- [ ] When a Curator approves a task in Abbit, the corresponding User Task in Camunda is completed
+- [ ] When the Camunda process reaches a new User Task, a corresponding Task entity is created in the Abbit database
+- [ ] Two-way synchronization ensures state consistency
+--- END FILE: docs/stories/US5.1-camunda-sync.md ---
+
+--- BEGIN FILE: docs/stories/US5.2-link-telegram.md ---
+# US5.2: Link Telegram Account
+
+**Epic:** System Integrations
+**Status:** Open
+
+## Description
+As a **Student**, I want to link my Telegram account.
+
+## Acceptance Criteria
+- [ ] User can generate a unique "Binding Code" in their Profile
+- [ ] User sends the code to the Abbit Telegram Bot
+- [ ] Bot verifies code and updates user profile with `chat_id`
+- [ ] Confirmation message sent to Telegram
+--- END FILE: docs/stories/US5.2-link-telegram.md ---
+
+--- BEGIN FILE: docs/stories/US5.3-parent-notifications.md ---
+# US5.3: Parent Notifications
+
+**Epic:** System Integrations
+**Status:** Open
+
+## Description
+As a **Parent**, I want to receive Telegram notifications about my child's progress.
+
+## Acceptance Criteria
+- [ ] System sends notifications for key events: Submission, Approval, Rejection, Deadline Warning
+- [ ] Notifications are sent to the linked Student's Telegram (or distinct Parent account if applicable)
+- [ ] Notification content is clear and informative
+--- END FILE: docs/stories/US5.3-parent-notifications.md ---
+
+--- BEGIN FILE: docs/stories/US5.4-minio-storage.md ---
+# US5.4: Secure File Storage (MinIO)
+
+**Epic:** System Integrations
+**Status:** Open
+
+## Description
+As a **System**, I want to store files securely in MinIO.
+
+## Acceptance Criteria
+- [ ] Files are uploaded to MinIO buckets structured by `{companyId}/{studentId}/...`
+- [ ] Files are NOT accessible via public public URLs
+- [ ] Access is granted only via generated presigned URLs with short expiration
+--- END FILE: docs/stories/US5.4-minio-storage.md ---
 
 --- BEGIN FILE: next-env.d.ts ---
 /// <reference types="next" />

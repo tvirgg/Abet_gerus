@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Param, Post, Request, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Request, Res, UseGuards } from "@nestjs/common";
+import { Response } from 'express';
 import { TasksService } from "./tasks.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { SubmitTaskDto } from "./dto/submit-task.dto";
@@ -7,7 +8,7 @@ import { RejectTaskDto } from "./dto/approve-task.dto";
 @Controller()
 @UseGuards(JwtAuthGuard)
 export class TasksController {
-  constructor(private readonly tasksService: TasksService) {}
+  constructor(private readonly tasksService: TasksService) { }
 
   @Get("student/tasks")
   getMyTasks(@Request() req: any) {
@@ -42,8 +43,16 @@ export class TasksController {
   // --- ИСПРАВЛЕНИЕ ЗДЕСЬ ---
   @Post("debug/generate")
   generate(@Request() req: any) {
-      // Используем новый метод syncTasksForUser вместо удаленного generateInitialTasks
-      return this.tasksService.syncTasksForUser(req.user.userId);
+    // Используем новый метод syncTasksForUser вместо удаленного generateInitialTasks
+    return this.tasksService.syncTasksForUser(req.user.userId);
+  }
+
+  @Get("download-zip")
+  async downloadZip(@Request() req: any, @Res() res: Response) {
+    const archive = await this.tasksService.downloadZip(req.user.userId);
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', 'attachment; filename="documents.zip"');
+    archive.pipe(res);
   }
   // -------------------------
 }

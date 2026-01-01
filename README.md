@@ -44,9 +44,11 @@ Before running the API, ensure the database is ready:
    ```bash
    docker-compose up -d
    ```
-2. Apply migrations and seed data (in apps/api directory):
+
+2. The application uses TypeORM with `synchronize: true` for development, so tables will be created automatically when you start the API.
+
+3. To seed initial data:
    ```bash
    cd apps/api
-   npx prisma migrate dev --name init
-   npx prisma db seed
+   npm run seed
    ```

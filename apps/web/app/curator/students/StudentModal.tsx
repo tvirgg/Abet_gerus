@@ -30,11 +30,11 @@ export default function StudentModal({ student, onClose, onSave, onDelete }: Pro
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const isEdit = !!student;
-  
+
   // Куратор может редактировать своих, админ всех.
   // Упростим: дадим редактировать, если это админ или если это создание.
   // Или просто разрешим редактировать поля.
-  const isViewOnly = !isAdmin && isEdit && student?.curatorId !== user?.curatorId; 
+  const isViewOnly = !isAdmin && isEdit && student?.curatorId !== user?.curatorId;
 
   const [fullName, setFullName] = useState(student?.fullName || "");
   const [email, setEmail] = useState(student?.email || "");
@@ -43,25 +43,25 @@ export default function StudentModal({ student, onClose, onSave, onDelete }: Pro
   const [countryId, setCountryId] = useState(student?.countryId || countries[0]?.id || "");
   const [isActive, setIsActive] = useState(student?.isActive ?? true);
   const [curatorId, setCuratorId] = useState(student?.curatorId || "");
-  
+
   const [curators, setCurators] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Загружаем список кураторов для дропдауна
   useEffect(() => {
-     const fetchCurators = async () => {
-         const token = localStorage.getItem("accessToken");
-         try {
-             const res = await fetch(`${API_URL}/admin/moderators`, {
-                 headers: { Authorization: `Bearer ${token}` }
-             });
-             if(res.ok) {
-                 const data = await res.json();
-                 setCurators(data.curators);
-             }
-         } catch (e) { console.error(e); }
-     };
-     fetchCurators();
+    const fetchCurators = async () => {
+      const token = localStorage.getItem("accessToken");
+      try {
+        const res = await fetch(`${API_URL}/admin/moderators`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setCurators(data.curators);
+        }
+      } catch (e) { console.error(e); }
+    };
+    fetchCurators();
   }, []);
 
   useEffect(() => {
@@ -80,9 +80,9 @@ export default function StudentModal({ student, onClose, onSave, onDelete }: Pro
       setIsActive(true);
       // Если создает куратор, ставим его сразу
       if (user?.role === 'curator' && user.curatorId) {
-          setCuratorId(user.curatorId);
+        setCuratorId(user.curatorId);
       } else {
-          setCuratorId("");
+        setCuratorId("");
       }
     }
   }, [student, countries, user]);
@@ -90,7 +90,7 @@ export default function StudentModal({ student, onClose, onSave, onDelete }: Pro
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setLoading(true);
-     
+
     const data: Partial<StudentFull> & { password?: string } = {
       fullName,
       email,
@@ -99,11 +99,11 @@ export default function StudentModal({ student, onClose, onSave, onDelete }: Pro
       isActive,
       curatorId: curatorId === "" ? undefined : curatorId,
     };
-    
+
     if (isEdit) {
       data.id = student!.id;
     }
-    
+
     try {
       await onSave(data);
       onClose();
@@ -139,68 +139,80 @@ export default function StudentModal({ student, onClose, onSave, onDelete }: Pro
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs text-zinc-500 mb-1">Email (Логин)</label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className={inputClass}
-                  />
-                </div>
-                <div className="relative">
-                   <label className="block text-xs text-zinc-500 mb-1">Пароль</label>
-                   <input
-                     type={showPassword ? "text" : "password"}
-                     value={password}
-                     onChange={(e) => setPassword(e.target.value)}
-                     className={`${inputClass} pr-10 font-mono`} // Added padding-right and font-mono
-                     placeholder={!isEdit ? "Обязательно" : "Пароль скрыт"} // Changed placeholder
-                     required={!isEdit} 
-                   />
-                   <button
-                     type="button"
-                     onClick={() => setShowPassword(!showPassword)}
-                     className="absolute right-3 top-7 text-xs text-zinc-400 hover:text-zinc-600"
-                   >
-                     {showPassword ? "🙈" : "👁️"}
-                   </button>
-                 </div>
+              <div>
+                <label className="block text-xs text-zinc-500 mb-1">Email (Логин)</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className={inputClass}
+                />
+              </div>
+              <div className="relative">
+                <label className="block text-xs text-zinc-500 mb-1">Пароль</label>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={`${inputClass} pr-10 font-mono`} // Added padding-right and font-mono
+                  placeholder={!isEdit ? "Обязательно" : "Пароль скрыт"} // Changed placeholder
+                  required={!isEdit}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-7 text-xs text-zinc-400 hover:text-zinc-600"
+                >
+                  {showPassword ? "🙈" : "👁️"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const pwd = Math.random().toString(36).slice(-8);
+                    setPassword(pwd);
+                    setShowPassword(true);
+                  }}
+                  className="absolute right-9 top-7 text-xs text-zinc-400 hover:text-zinc-600 transform active:scale-95 transition-transform"
+                  title="Сгенерировать пароль"
+                >
+                  🎲
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-xs text-zinc-500 mb-1">Страна</label>
-                    <select
-                        value={countryId}
-                        onChange={(e) => setCountryId(e.target.value)}
-                        className={inputClass}
-                    >
-                        {countries.map((c) => (
-                        <option key={c.id} value={c.id}>
-                            {c.flag_icon} {c.name}
-                        </option>
-                        ))}
-                    </select>
-                </div>
-                <div>
-                    <label className="block text-xs text-zinc-500 mb-1">Куратор</label>
-                    <select
-                        value={curatorId}
-                        onChange={(e) => setCuratorId(e.target.value)}
-                        className={inputClass}
-                    >
-                        <option value="">-- Нет --</option>
-                        {curators.map((c) => (
-                        <option key={c.id} value={c.curator?.id}>
-                            {c.curator?.fullName || c.email}
-                        </option>
-                        ))}
-                    </select>
-                </div>
+              <div>
+                <label className="block text-xs text-zinc-500 mb-1">Страна</label>
+                <select
+                  value={countryId}
+                  onChange={(e) => setCountryId(e.target.value)}
+                  className={inputClass}
+                >
+                  {countries.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.flag_icon} {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-zinc-500 mb-1">Куратор</label>
+                <select
+                  value={curatorId}
+                  onChange={(e) => setCuratorId(e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">-- Нет --</option>
+                  {curators.map((c) => (
+                    <option key={c.id} value={c.curator?.id}>
+                      {c.curator?.fullName || c.email}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-            
+
             <div className="flex items-center pt-2">
               <input
                 type="checkbox"
@@ -212,40 +224,40 @@ export default function StudentModal({ student, onClose, onSave, onDelete }: Pro
               <label htmlFor="isActive" className="text-sm">Активный аккаунт</label>
             </div>
           </div>
-          
+
           <div className="flex justify-between mt-6">
             {/* Кнопка удаления (только если редактирование и есть функция) */}
             {isEdit && student && onDelete ? (
-                <button
-                  type="button"
-                  onClick={async () => {
-                      if(confirm("Удалить студента и все его данные безвозвратно?")) {
-                          await onDelete(student.id);
-                          onClose();
-                      }
-                  }}
-                  className="px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded text-sm"
-                >
-                    Удалить
-                </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (confirm("Удалить студента и все его данные безвозвратно?")) {
+                    await onDelete(student.id);
+                    onClose();
+                  }
+                }}
+                className="px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded text-sm"
+              >
+                Удалить
+              </button>
             ) : <div></div>}
 
             <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-4 py-2 border rounded text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800"
-                  disabled={loading}
-                >
-                  Отмена
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50"
-                  disabled={loading}
-                >
-                  {loading ? "Сохранение..." : isEdit ? "Сохранить" : "Создать"}
-                </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 border rounded text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                disabled={loading}
+              >
+                Отмена
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50"
+                disabled={loading}
+              >
+                {loading ? "Сохранение..." : isEdit ? "Сохранить" : "Создать"}
+              </button>
             </div>
           </div>
         </form>

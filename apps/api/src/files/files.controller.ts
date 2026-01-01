@@ -10,7 +10,7 @@ export class FilesController {
   @Post('upload')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor('file'))
-  async uploadFile(@UploadedFile() file: Express.Multer.File) {
+  async uploadFile(@UploadedFile() file: any) {
     const url = await this.filesService.uploadFile(file);
     return { url };
   }

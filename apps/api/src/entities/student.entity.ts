@@ -38,6 +38,9 @@ export class Student {
   @Column({ nullable: true })
   bindingCode?: string;
 
+  @Column({ type: 'bigint', nullable: true }) // Telegram Chat ID может быть большим
+  telegramGroupId?: string;
+
   @Column({ default: 0 })
   xpTotal!: number;
 

@@ -36,7 +36,7 @@ export class FilesService implements OnModuleInit {
     }
   }
 
-  async uploadFile(file: Express.Multer.File) {
+  async uploadFile(file: any) {
     const fileName = `${Date.now()}-${file.originalname}`;
     await this.minioClient.putObject(
       this.bucketName,
@@ -45,9 +45,13 @@ export class FilesService implements OnModuleInit {
       file.size,
       { 'Content-Type': file.mimetype }
     );
-    
+
     // Возвращаем URL. В проде здесь должен быть публичный домен, сейчас для локальной разработки:
     const host = process.env.MINIO_EXTERNAL_HOST || 'localhost';
     return `http://${host}:9000/${this.bucketName}/${fileName}`;
+  }
+
+  async getFileStream(objectName: string) {
+    return await this.minioClient.getObject(this.bucketName, objectName);
   }
 }

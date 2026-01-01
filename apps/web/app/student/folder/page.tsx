@@ -1,7 +1,7 @@
 "use client";
 import { useCountry } from "@/shared/CountryContext";
 import { useProgress } from "@/shared/ProgressContext";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 export default function FolderPage() {
   const { documents, selectedCountry, quests } = useCountry();
@@ -18,10 +18,10 @@ export default function FolderPage() {
     // Сопоставляем Task (из БД) с QuestTemplate (из JSON) по названию,
     // так как ID у них разные.
     doneTasks.forEach((task) => {
-        const template = quests.find(q => q.title === task.title);
-        if (template && template.links_to_document_id) {
-            doneDocIds.add(template.links_to_document_id);
-        }
+      const template = quests.find(q => q.title === task.title);
+      if (template && template.links_to_document_id) {
+        doneDocIds.add(template.links_to_document_id);
+      }
     });
 
     return doneDocIds;
@@ -32,8 +32,37 @@ export default function FolderPage() {
   const required = new Set(selectedCountry.required_document_ids);
   const filtered = documents.filter((d) => required.has(d.id) && completedDocumentIds.has(d.id));
 
-  const handleDownload = () => {
-    alert("Имитация скачивания архива. В реальном приложении здесь будет логика для создания и скачивания ZIP-файла.");
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    try {
+      setIsDownloading(true);
+      const token = localStorage.getItem("accessToken");
+      const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
+
+      const res = await fetch(`${API_URL}/tasks/download-zip`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (!res.ok) throw new Error("Failed to download");
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = "documents.zip";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      alert("Не удалось скачать архив. Попробуйте позже.");
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
@@ -45,8 +74,12 @@ export default function FolderPage() {
             Здесь хранятся все готовые и проверенные документы.
           </p>
         </div>
-        <button className="btn btn-primary" onClick={handleDownload} disabled={filtered.length === 0}>
-          Скачать архивом
+        <button
+          className="btn btn-primary"
+          onClick={handleDownload}
+          disabled={filtered.length === 0 || isDownloading}
+        >
+          {isDownloading ? 'Скачивание...' : 'Скачать архивом'}
         </button>
       </div>
       {filtered.length === 0 ? (

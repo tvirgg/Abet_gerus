@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  lint-and-typecheck:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [api, web]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install Dependencies
+      run: npm ci
+      # Assuming root package.json has workspaces or we install in specific dirs.
+      # Since it seems to be a monorepo without workspaces (std folder structure), we might need to install in each.
+      # Let's check root package.json first.
+      
+    - name: Install dependencies for ${{ matrix.app }}
+      run: |
+        cd apps/${{ matrix.app }}
+        npm install
+
+    - name: Lint ${{ matrix.app }}
+      run: |
+        cd apps/${{ matrix.app }}
+        npm run lint --if-present
+
+    - name: Build ${{ matrix.app }}
+      run: |
+        cd apps/${{ matrix.app }}
+        npm run build --if-present

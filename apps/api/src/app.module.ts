@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { ConfigModule } from "@nestjs/config";
 import { HttpModule } from "@nestjs/axios";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { CamundaModule } from "./camunda/camunda.module";
@@ -8,6 +9,7 @@ import { TasksModule } from "./tasks/tasks.module";
 import { AdminModule } from "./admin/admin.module";
 import { FilesModule } from "./files/files.module";
 import { StudentsModule } from "./students/students.module";
+import { TelegramModule } from "./telegram/telegram.module";
 
 // Entities
 import { Company } from "./entities/company.entity";
@@ -22,6 +24,9 @@ import { Curator } from "./entities/curator.entity";
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
     HttpModule,
     TypeOrmModule.forRoot({
       type: 'postgres',
@@ -37,6 +42,7 @@ import { Curator } from "./entities/curator.entity";
     AdminModule,
     FilesModule,
     StudentsModule,
+    TelegramModule,
   ],
 })
-export class AppModule {}
+export class AppModule { }

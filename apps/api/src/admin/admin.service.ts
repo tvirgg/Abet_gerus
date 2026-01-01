@@ -16,12 +16,12 @@ export const unhashPassword = (hash: string) => hash ? hash.replace('hashed_', '
 
 // Стандартный набор задач для любой новой страны
 const DEFAULT_COUNTRY_TASKS = [
-    { title: "Загрузить скан загранпаспорта", stage: "Документы", xpReward: 20, description: "Загрузите PDF скан главной страницы паспорта." },
-    { title: "Сделать фото для визы", stage: "Документы", xpReward: 15, description: "Фото 3.5х4.5 на белом фоне." },
-    { title: "Перевести аттестат/диплом", stage: "Документы", xpReward: 50, description: "Нотариально заверенный перевод на английский или язык страны." },
-    { title: "Выбрать программу обучения", stage: "Подготовка", xpReward: 10, description: "Изучите список программ в университетах этой страны." },
-    { title: "Написать мотивационное письмо (Draft)", stage: "Творчество", xpReward: 60, description: "Напишите черновик письма, почему вы хотите учиться именно здесь." },
-    { title: "Подать заявку на визу", stage: "Виза", xpReward: 100, description: "Запишитесь в консульство и подайте документы." }
+  { title: "Загрузить скан загранпаспорта", stage: "Документы", xpReward: 20, description: "Загрузите PDF скан главной страницы паспорта." },
+  { title: "Сделать фото для визы", stage: "Документы", xpReward: 15, description: "Фото 3.5х4.5 на белом фоне." },
+  { title: "Перевести аттестат/диплом", stage: "Документы", xpReward: 50, description: "Нотариально заверенный перевод на английский или язык страны." },
+  { title: "Выбрать программу обучения", stage: "Подготовка", xpReward: 10, description: "Изучите список программ в университетах этой страны." },
+  { title: "Написать мотивационное письмо (Draft)", stage: "Творчество", xpReward: 60, description: "Напишите черновик письма, почему вы хотите учиться именно здесь." },
+  { title: "Подать заявку на визу", stage: "Виза", xpReward: 100, description: "Запишитесь в консульство и подайте документы." }
 ];
 
 @Injectable()
@@ -35,21 +35,21 @@ export class AdminService {
     @InjectRepository(Company) private companyRepo: Repository<Company>,
     @InjectRepository(Curator) private curatorRepo: Repository<Curator>,
     @InjectRepository(Program) private programRepo: Repository<Program>,
-  ) {}
+  ) { }
 
   async getModerators() {
     const curators = await this.userRepo.find({
       where: { role: Role.CURATOR },
-      relations: ['curator'], 
+      relations: ['curator'],
       // Добавляем passwordHash в выборку, чтобы его "расшифровать"
-      select: ['id', 'email', 'companyId', 'isActive', 'createdAt', 'passwordHash'] 
+      select: ['id', 'email', 'companyId', 'isActive', 'createdAt', 'passwordHash']
     });
     const students = await this.studentRepo.find({ select: ['id', 'fullName', 'countryId', 'xpTotal'] });
-    
+
     // Возвращаем кураторов с "чистым" паролем
-    return { 
-        curators: curators.map(c => ({ ...c, password: unhashPassword(c.passwordHash) })), 
-        students 
+    return {
+      curators: curators.map(c => ({ ...c, password: unhashPassword(c.passwordHash) })),
+      students
     };
   }
 
@@ -58,7 +58,7 @@ export class AdminService {
       relations: { user: true, curator: true }, // Explicit object syntax
       order: { fullName: 'ASC' }
     });
-    
+
     return students.map(s => ({
       id: s.id,
       fullName: s.fullName,
@@ -93,7 +93,7 @@ export class AdminService {
         { id: In(studentIds) },
         { curatorId: curator.id }
       );
-      
+
       // Синхронизируем задачи (опционально, если логика требует пересчета задач при смене куратора, 
       // но пока задачи привязаны к студенту, так что просто меняем владельца)
     }
@@ -108,12 +108,12 @@ export class AdminService {
     // Проверяем, существует ли пользователь с таким email
     const existing = await this.userRepo.findOne({ where: { email: data.email } });
     if (existing) {
-        throw new BadRequestException("User with this email already exists");
+      throw new BadRequestException("User with this email already exists");
     }
 
     // Генерируем пароль, если не передан
     const password = data.password || Math.random().toString(36).slice(-8);
-    
+
     // 1. Создаем User
     const user = this.userRepo.create({
       email: data.email,
@@ -148,15 +148,15 @@ export class AdminService {
     if (data.isActive !== undefined) user.isActive = data.isActive;
     // Если пришел пароль - обновляем хеш
     if (data.password) user.passwordHash = hashPassword(data.password);
-    
+
     await this.userRepo.save(user);
 
     if (user.curator) {
-        if (data.fullName) user.curator.fullName = data.fullName;
-        if (data.specialization) user.curator.specialization = data.specialization;
-        if (data.bio) user.curator.bio = data.bio;
-        if (data.avatarUrl) user.curator.avatarUrl = data.avatarUrl;
-        await this.curatorRepo.save(user.curator);
+      if (data.fullName) user.curator.fullName = data.fullName;
+      if (data.specialization) user.curator.specialization = data.specialization;
+      if (data.bio) user.curator.bio = data.bio;
+      if (data.avatarUrl) user.curator.avatarUrl = data.avatarUrl;
+      await this.curatorRepo.save(user.curator);
     }
     return user;
   }
@@ -174,10 +174,10 @@ export class AdminService {
 
     const existing = await this.userRepo.findOne({ where: { email: data.email } });
     if (existing) {
-        throw new BadRequestException("User with this email already exists");
+      throw new BadRequestException("User with this email already exists");
     }
 
-    const password = data.password || "12345678"; 
+    const password = data.password || Math.random().toString(36).slice(-8);
 
     const user = this.userRepo.create({
       email: data.email,
@@ -199,34 +199,34 @@ export class AdminService {
     });
     await this.studentRepo.save(student);
 
-    return student;
+    return { ...student, generatedPassword: data.password ? null : password };
   }
 
   async updateStudentAdmin(id: string, data: any) {
-      const student = await this.studentRepo.findOne({ where: { id }, relations: ['user'] });
-      if (!student) throw new NotFoundException("Student not found");
+    const student = await this.studentRepo.findOne({ where: { id }, relations: ['user'] });
+    if (!student) throw new NotFoundException("Student not found");
 
-      if (data.fullName) student.fullName = data.fullName;
-      if (data.countryId) student.countryId = data.countryId;
-      if (data.curatorId !== undefined) student.curatorId = data.curatorId;
-      
-      await this.studentRepo.save(student);
+    if (data.fullName) student.fullName = data.fullName;
+    if (data.countryId) student.countryId = data.countryId;
+    if (data.curatorId !== undefined) student.curatorId = data.curatorId;
 
-      if (data.email || data.isActive !== undefined) {
-          if (data.email) student.user.email = data.email;
-          if (data.isActive !== undefined) student.user.isActive = data.isActive;
-          await this.userRepo.save(student.user);
-      }
+    await this.studentRepo.save(student);
 
-      return student;
+    if (data.email || data.isActive !== undefined) {
+      if (data.email) student.user.email = data.email;
+      if (data.isActive !== undefined) student.user.isActive = data.isActive;
+      await this.userRepo.save(student.user);
+    }
+
+    return student;
   }
 
   async deleteStudent(studentId: string) {
     // 1. Находим студента, чтобы получить ID его пользователя (User)
     const student = await this.studentRepo.findOne({ where: { id: studentId } });
-    
+
     if (!student) {
-        throw new NotFoundException("Student not found");
+      throw new NotFoundException("Student not found");
     }
 
     // 2. Удаляем User. 
@@ -236,13 +236,15 @@ export class AdminService {
 
     return { success: true };
   }
-  
+
   async resetPassword(userId: string, newPassword?: string) {
-      const user = await this.userRepo.findOneBy({ id: userId });
-      if(!user) throw new NotFoundException("User not found");
-      
-      user.passwordHash = hashPassword(newPassword || "12345678");
-      return this.userRepo.save(user);
+    const user = await this.userRepo.findOneBy({ id: userId });
+    if (!user) throw new NotFoundException("User not found");
+
+    const password = newPassword || Math.random().toString(36).slice(-8);
+    user.passwordHash = hashPassword(password);
+    await this.userRepo.save(user);
+    return { generatedPassword: password };
   }
 
   // ... (методы createCountry, getUniversities и др. оставляем как есть) ...
@@ -250,21 +252,21 @@ export class AdminService {
   async createCountry(data: Partial<Country>) {
     const country = await this.countryRepo.save(data);
     const tasksToCreate = DEFAULT_COUNTRY_TASKS.map(t => this.taskTplRepo.create({
-        ...t,
-        countryId: country.id,
+      ...t,
+      countryId: country.id,
     }));
     await this.taskTplRepo.save(tasksToCreate);
     return country;
   }
 
   async findAllCountries() {
-      return this.countryRepo.find({ order: { name: 'ASC' } });
+    return this.countryRepo.find({ order: { name: 'ASC' } });
   }
 
   async getUniversities() {
-    return this.uniRepo.find({ 
-        relations: ['country', 'programs'],
-        order: { name: 'ASC' }
+    return this.uniRepo.find({
+      relations: ['country', 'programs'],
+      order: { name: 'ASC' }
     });
   }
 
@@ -281,9 +283,9 @@ export class AdminService {
   }
 
   async deleteTaskTemplate(id: number) {
-      return this.taskTplRepo.delete(id);
+    return this.taskTplRepo.delete(id);
   }
-  
+
   async searchPrograms(query: { countryId?: string; universityId?: string; category?: string; search?: string }) {
     const qb = this.programRepo.createQueryBuilder('program')
       .leftJoinAndSelect('program.university', 'university')

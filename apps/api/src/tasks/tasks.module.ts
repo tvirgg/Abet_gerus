@@ -5,11 +5,15 @@ import { TasksController } from "./tasks.controller";
 import { Task } from "../entities/task.entity";
 import { Student } from "../entities/student.entity";
 import { TaskTemplate } from "../entities/task-template.entity"; // <-- Добавили
+import { FilesModule } from "../files/files.module";
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Task, Student, TaskTemplate])], // <-- Добавили
+  imports: [
+    TypeOrmModule.forFeature([Task, Student, TaskTemplate]),
+    FilesModule // Import FilesModule
+  ],
   providers: [TasksService],
   controllers: [TasksController],
   exports: [TasksService],
 })
-export class TasksModule {}
+export class TasksModule { }
