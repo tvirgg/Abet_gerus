@@ -10,21 +10,23 @@ import { User } from "../entities/user.entity";
 import { Student } from "../entities/student.entity";
 import { Company } from "../entities/company.entity";
 import { Curator } from "../entities/curator.entity";
+import { TasksModule } from "../tasks/tasks.module";
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      Country, 
-      University, 
+      Country,
+      University,
       Program, // <--- Обязательно здесь
-      TaskTemplate, 
-      User, 
-      Student, 
-      Company, 
+      TaskTemplate,
+      User,
+      Student,
+      Company,
       Curator
-    ])
+    ]),
+    TasksModule  // Import TasksModule to access TasksService
   ],
   controllers: [AdminController],
   providers: [AdminService],
 })
-export class AdminModule {}
+export class AdminModule { }

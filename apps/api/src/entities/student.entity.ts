@@ -1,7 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn, OneToMany, ManyToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn, OneToMany, ManyToOne, ManyToMany, JoinTable } from 'typeorm';
 import { User } from './user.entity';
 import { Task } from './task.entity';
 import { Curator } from './curator.entity';
+import { Country } from './country.entity';
 
 @Entity('students')
 export class Student {
@@ -30,6 +31,15 @@ export class Student {
 
   @Column({ nullable: true })
   countryId?: string;
+
+  // --- Multi-Country Support ---
+  @ManyToMany(() => Country)
+  @JoinTable({
+    name: 'student_countries',
+    joinColumn: { name: 'studentId', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'countryId', referencedColumnName: 'id' }
+  })
+  countries!: Country[];
 
   // --- НОВОЕ: Выбранные программы ---
   @Column('jsonb', { default: [] })

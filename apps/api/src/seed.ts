@@ -8,13 +8,14 @@ import { University } from './entities/university.entity';
 import { Program } from './entities/program.entity';
 import { TaskTemplate } from './entities/task-template.entity';
 import { Curator } from './entities/curator.entity';
+import { DocumentTemplate, DocumentType } from './entities/document-template.entity';
 import { Role } from './entities/enums'; // Импортируем Role
 import "dotenv/config";
 
 const AppDataSource = new DataSource({
     type: 'postgres',
     url: process.env.DATABASE_URL,
-    entities: [Company, Country, User, Student, Task, University, Program, TaskTemplate, Curator],
+    entities: [Company, Country, User, Student, Task, University, Program, TaskTemplate, Curator, DocumentTemplate],
     synchronize: true,
 });
 
@@ -37,12 +38,12 @@ async function seed() {
     // 2. Countries
     const countryRepo = AppDataSource.getRepository(Country);
     const countriesData = [
-        { 
-            id: 'at', 
-            name: 'Австрия', 
-            flagIcon: '🇦🇹', 
+        {
+            id: 'at',
+            name: 'Австрия',
+            flagIcon: '🇦🇹',
             // Добавляем дефолтные ID документов (пример)
-            requiredDocumentIds: [101, 102, 201, 202, 203] 
+            requiredDocumentIds: [101, 102, 201, 202, 203]
         },
         { id: 'it', name: 'Италия', flagIcon: '🇮🇹', requiredDocumentIds: [] },
         { id: 'de', name: 'Германия', flagIcon: '🇩🇪', requiredDocumentIds: [] },
@@ -119,11 +120,47 @@ async function seed() {
     }
     console.log("✅ Universities & Programs seeded");
 
+    // =========================================================
+    // 4. TaskTemplates (CRITICAL FIX)
+    // =========================================================
+    const taskTplRepo = AppDataSource.getRepository(TaskTemplate);
+
+    // Austria TaskTemplates
+    const austriaTasks = [
+        { countryId: 'at', title: "Загрузить скан загранпаспорта", stage: "Документы", xpReward: 20, description: "Загрузите PDF скан главной страницы паспорта." },
+        { countryId: 'at', title: "Сделать фото для визы", stage: "Документы", xpReward: 15, description: "Фото 3.5х4.5 на белом фоне." },
+        { countryId: 'at', title: "Перевести аттестат/диплом", stage: "Документы", xpReward: 50, description: "Нотариально заверенный перевод на английский или немецкий." },
+        { countryId: 'at', title: "Выбрать программу обучения", stage: "Подготовка", xpReward: 10, description: "Изучите программы в австрийских университетах." },
+        { countryId: 'at', title: "Написать мотивационное письмо", stage: "Творчество", xpReward: 60, description: "Черновик письма на немецком или английском." },
+        { countryId: 'at', title: "Подать заявку на визу", stage: "Виза", xpReward: 100, description: "Запись в консульство Австрии." }
+    ];
+
+    // Italy TaskTemplates
+    const italyTasks = [
+        { countryId: 'it', title: "Загрузить скан загранпаспорта", stage: "Документы", xpReward: 20, description: "Загрузите PDF скан главной страницы паспорта." },
+        { countryId: 'it', title: "Сделать фото для визы", stage: "Документы", xpReward: 15, description: "Фото 3.5х4.5 на белом фоне." },
+        { countryId: 'it', title: "Перевести аттестат/диплом", stage: "Документы", xpReward: 50, description: "Нотариально заверенный перевод на итальянский или английский." },
+        { countryId: 'it', title: "Выбрать программу обучения", stage: "Подготовка", xpReward: 10, description: "Изучите программы в итальянских университетах." },
+        { countryId: 'it', title: "Написать мотивационное письмо", stage: "Творчество", xpReward: 60, description: "Черновик письма на итальянском или английском." },
+        { countryId: 'it', title: "Подать заявку на визу", stage: "Виза", xpReward: 100, description: "Запись в консульство Италии." }
+    ];
+
+    const allTaskTemplates = [...austriaTasks, ...italyTasks];
+
+    for (const t of allTaskTemplates) {
+        const existing = await taskTplRepo.findOne({
+            where: { countryId: t.countryId, title: t.title }
+        });
+        if (!existing) {
+            await taskTplRepo.save(taskTplRepo.create(t));
+        }
+    }
+    console.log(`✅ TaskTemplates seeded: ${allTaskTemplates.length} templates`);
 
     // =========================================================
-    // 4. Users & Students (ДОБАВЛЕНО)
+    // 5. Users & Students
     // =========================================================
-    
+
     const userRepo = AppDataSource.getRepository(User);
     const studentRepo = AppDataSource.getRepository(Student);
     const curatorRepo = AppDataSource.getRepository(Curator);
@@ -131,7 +168,7 @@ async function seed() {
     // 4.1 Создаем Куратора
     const curatorEmail = "curator@abbit.com";
     let curatorUser = await userRepo.findOne({ where: { email: curatorEmail } });
-    
+
     if (!curatorUser) {
         curatorUser = userRepo.create({
             companyId: company.id,
@@ -152,11 +189,59 @@ async function seed() {
         await curatorRepo.save(curator);
         console.log("✅ Curator created");
     }
-    
+
     // Получаем сущность куратора для привязки
     const curator = await curatorRepo.findOne({ where: { userId: curatorUser.id } });
 
-    // 4.2 Создаем Студента
+    // =========================================================
+    // 6. Document Templates
+    // =========================================================
+    const docTemplateRepo = AppDataSource.getRepository(DocumentTemplate);
+    const docTemplatesData = [
+        {
+            title: 'Скан Паспорта',
+            step_order: 1,
+            document_type: DocumentType.PASSPORT,
+            advice_text: 'Главный документ для зачисления и визы. Загрузите цветной скан или фото главного разворота загранпаспорта. Убедитесь, что нет бликов и видны все углы.',
+            validation_rules: ['Читаемость всех зон (MRZ, ФИО, номер)', 'Отсутствие бликов', 'Видимость всех 4-х углов', 'Срок действия > 18 месяцев'],
+            rejection_reasons: ['Скан обрезан', 'Текст не читаем', 'Истек срок действия']
+        },
+        {
+            title: 'Справка с места учебы',
+            step_order: 2,
+            document_type: DocumentType.EDUCATION,
+            advice_text: 'Подтверждение того, что вы сейчас обучаетесь. Если справка не на английском, потребуется перевод.',
+            validation_rules: ['Наличие "живой" печати', 'Наличие подписи', 'Свежая дата выдачи (< 3 мес)'],
+            rejection_reasons: ['Справка устарела', 'Нет печати', 'Неверный формат']
+        },
+        {
+            title: 'Апостиль диплома/аттестата',
+            step_order: 2,
+            document_type: DocumentType.EDUCATION,
+            advice_text: 'Оригинал диплома должен иметь штамп Апостиль (выдается Министерством образования). Срок: до 15 рабочих дней.',
+            validation_rules: ['Наличие штампа "Apostille"', 'Читаемость печати', 'Целостность скрепления'],
+            rejection_reasons: ['Нет штампа на обороте', 'Штамп не читаем']
+        },
+        {
+            title: 'Нотариальный перевод',
+            step_order: 3,
+            document_type: DocumentType.TRANSLATION,
+            advice_text: 'Перевод документов на язык обучения (обычно английский). Загрузите скан перевода, сшитого с копией документа, заверенный нотариусом.',
+            validation_rules: ['Подпись переводчика', 'Печать и подпись нотариуса', 'Сшито с копией'],
+            rejection_reasons: ['Нет заверения нотариуса', 'Неполный документ']
+        }
+    ];
+
+    for (const dt of docTemplatesData) {
+        let t = await docTemplateRepo.findOne({ where: { title: dt.title } });
+        if (!t) {
+            t = docTemplateRepo.create(dt);
+            await docTemplateRepo.save(t);
+        }
+    }
+    console.log("✅ Document Templates seeded");
+
+    // 7. Создаем Студента (продолжаем логику)
     const studentEmail = "student@example.com";
     let studentUser = await userRepo.findOne({ where: { email: studentEmail } });
 
@@ -180,7 +265,7 @@ async function seed() {
             countryId: 'at', // Австрия
             bindingCode: "S-1000",
             curatorId: curator?.id, // Привязываем к куратору
-            selectedProgramIds: programsToAssign, // <--- ВОТ ЗДЕСЬ ДОБАВЛЯЕМ ПРОГРАММЫ
+            selectedProgramIds: programsToAssign,
             xpTotal: 150
         });
         await studentRepo.save(student);

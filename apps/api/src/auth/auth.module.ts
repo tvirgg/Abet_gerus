@@ -10,13 +10,14 @@ import { TasksModule } from "../tasks/tasks.module";
 import { User } from "../entities/user.entity";
 import { Student } from "../entities/student.entity";
 import { Company } from "../entities/company.entity";
+import { Country } from "../entities/country.entity";
 
 @Module({
   imports: [
     CamundaModule,
     PassportModule,
     TasksModule,
-    TypeOrmModule.forFeature([User, Student, Company]),
+    TypeOrmModule.forFeature([User, Student, Company, Country]),
     JwtModule.register({
       secret: process.env.JWT_SECRET || "dev_secret_key",
       signOptions: { expiresIn: "7d" },
@@ -25,4 +26,4 @@ import { Company } from "../entities/company.entity";
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],
 })
-export class AuthModule {}
+export class AuthModule { }

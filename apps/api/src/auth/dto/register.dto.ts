@@ -4,6 +4,7 @@ export class RegisterDto {
   email!: string;
   password?: string;
   fullName?: string;
-  countryId?: string;
+  countryId?: string; // Deprecated: for backward compatibility
+  countryIds?: string[]; // NEW: Multi-country support
   role?: "student" | "curator" | "admin";
 }

@@ -51,4 +51,32 @@ export class CamundaService {
       );
     }
   }
+
+  async sendMessage(messageName: string, businessKey?: string, variables: Record<string, any> = {}) {
+    const url = `${this.baseUrl}/message`;
+    const payload = {
+      messageName,
+      businessKey,
+      processVariables: Object.fromEntries(
+        Object.entries(variables).map(([k, v]) => [
+          k,
+          { value: v, type: typeof v === "number" ? "Long" : "String" },
+        ])
+      ),
+    };
+
+    try {
+      const res = await firstValueFrom(this.http.post(url, payload));
+      return res.data; // Usually strictly waits for result, returns void or array of results
+    } catch (error: any) {
+      console.error("❌ CAMUNDA MESSAGE ERROR:", error.message);
+      // We don't necessarily want to throw and block the API if Camunda is optional or down,
+      // but the user said "if connected".
+      // Assuming "silent fail" or verify connection before sending is handled by caller or we just catch here.
+      // For now, let's rethrow friendly error or null if we want to be soft.
+      // Given the prompt "Отправь ... (если подключен)", strictly speaking we should probably just log and move on if it fails?
+      // But typically we want to know if it failed. I'll return null on error to indicate failure without crashing.
+      return null;
+    }
+  }
 }

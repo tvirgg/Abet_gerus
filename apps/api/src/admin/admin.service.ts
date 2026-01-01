@@ -10,6 +10,7 @@ import { Company } from "../entities/company.entity";
 import { Curator } from "../entities/curator.entity";
 import { Role } from "../entities/enums";
 import { Program } from "../entities/program.entity";
+import { TasksService } from "../tasks/tasks.service";
 
 export const hashPassword = (pwd: string) => `hashed_${pwd}`;
 export const unhashPassword = (hash: string) => hash ? hash.replace('hashed_', '') : '';
@@ -35,6 +36,7 @@ export class AdminService {
     @InjectRepository(Company) private companyRepo: Repository<Company>,
     @InjectRepository(Curator) private curatorRepo: Repository<Curator>,
     @InjectRepository(Program) private programRepo: Repository<Program>,
+    private tasksService: TasksService
   ) { }
 
   async getModerators() {
@@ -177,6 +179,20 @@ export class AdminService {
       throw new BadRequestException("User with this email already exists");
     }
 
+    // Multi-country support: accept countryIds array or fall back to single countryId
+    const countryIds = data.countryIds || (data.countryId ? [data.countryId] : []);
+
+    // Validate all country IDs exist
+    if (countryIds.length > 0) {
+      const countries = await this.countryRepo.find({
+        where: countryIds.map((id: string) => ({ id }))
+      });
+
+      if (countries.length !== countryIds.length) {
+        throw new BadRequestException("One or more country IDs are invalid");
+      }
+    }
+
     const password = data.password || Math.random().toString(36).slice(-8);
 
     const user = this.userRepo.create({
@@ -192,25 +208,63 @@ export class AdminService {
       userId: savedUser.id,
       companyId: company.id,
       fullName: data.fullName,
-      countryId: data.countryId,
+      countryId: data.countryId, // Legacy support
       curatorId: data.curatorId || null,
       bindingCode: `S-${Math.floor(1000 + Math.random() * 9000)}`,
       xpTotal: 0
     });
-    await this.studentRepo.save(student);
+    const savedStudent = await this.studentRepo.save(student);
 
-    return { ...student, generatedPassword: data.password ? null : password };
+    // Set countries relationship
+    if (countryIds.length > 0) {
+      const countries = await this.countryRepo.find({
+        where: countryIds.map((id: string) => ({ id }))
+      });
+      savedStudent.countries = countries;
+      await this.studentRepo.save(savedStudent);
+    }
+
+    // CRITICAL: Sync tasks for all selected countries
+    await this.tasksService.syncStudentTasks(savedStudent.id);
+
+    return { ...savedStudent, generatedPassword: data.password ? null : password };
   }
 
   async updateStudentAdmin(id: string, data: any) {
-    const student = await this.studentRepo.findOne({ where: { id }, relations: ['user'] });
+    const student = await this.studentRepo.findOne({
+      where: { id },
+      relations: ['user', 'countries']
+    });
     if (!student) throw new NotFoundException("Student not found");
 
+    let countriesChanged = false;
+
     if (data.fullName) student.fullName = data.fullName;
-    if (data.countryId) student.countryId = data.countryId;
+    if (data.countryId) student.countryId = data.countryId; // Legacy
     if (data.curatorId !== undefined) student.curatorId = data.curatorId;
 
+    // Multi-country update
+    if (data.countryIds) {
+      // Validate new country IDs
+      const countries = await this.countryRepo.find({
+        where: data.countryIds.map((id: string) => ({ id }))
+      });
+
+      if (countries.length !== data.countryIds.length) {
+        throw new BadRequestException("One or more country IDs are invalid");
+      }
+
+      student.countries = countries;
+      countriesChanged = true;
+    }
+
     await this.studentRepo.save(student);
+
+    // Re-sync tasks if countries changed
+    if (countriesChanged) {
+      console.log(`[DEBUG] 🔄 Countries changed for student ${student.fullName}, re-syncing tasks...`);
+      await this.tasksService.syncStudentTasks(student.id);
+    }
 
     if (data.email || data.isActive !== undefined) {
       if (data.email) student.user.email = data.email;

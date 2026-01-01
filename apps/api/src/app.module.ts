@@ -10,6 +10,7 @@ import { AdminModule } from "./admin/admin.module";
 import { FilesModule } from "./files/files.module";
 import { StudentsModule } from "./students/students.module";
 import { TelegramModule } from "./telegram/telegram.module";
+import { DocumentsModule } from "./documents/documents.module";
 
 // Entities
 import { Company } from "./entities/company.entity";
@@ -21,6 +22,8 @@ import { University } from "./entities/university.entity";
 import { Program } from "./entities/program.entity";
 import { TaskTemplate } from "./entities/task-template.entity";
 import { Curator } from "./entities/curator.entity";
+import { DocumentTemplate } from "./entities/document-template.entity";
+import { StudentDocument } from "./entities/student-document.entity";
 
 @Module({
   imports: [
@@ -31,7 +34,7 @@ import { Curator } from "./entities/curator.entity";
     TypeOrmModule.forRoot({
       type: 'postgres',
       url: process.env.DATABASE_URL,
-      entities: [Company, User, Student, Country, Task, University, Program, TaskTemplate, Curator],
+      entities: [Company, User, Student, Country, Task, University, Program, TaskTemplate, Curator, DocumentTemplate, StudentDocument],
       synchronize: true, // Внимание: только для разработки. В проде используйте миграции.
       autoLoadEntities: true,
     }),
@@ -43,6 +46,7 @@ import { Curator } from "./entities/curator.entity";
     FilesModule,
     StudentsModule,
     TelegramModule,
+    DocumentsModule,
   ],
 })
 export class AppModule { }

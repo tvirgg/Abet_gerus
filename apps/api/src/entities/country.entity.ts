@@ -1,5 +1,6 @@
-import { Entity, PrimaryColumn, Column, OneToMany } from 'typeorm';
+import { Entity, PrimaryColumn, Column, OneToMany, ManyToMany } from 'typeorm';
 import { University } from './university.entity';
+import { Student } from './student.entity';
 
 @Entity('countries')
 export class Country {
@@ -15,6 +16,9 @@ export class Country {
   // --- НОВОЕ ПОЛЕ ---
   @Column('jsonb', { default: [] })
   requiredDocumentIds!: number[];
+
+  @ManyToMany(() => Student, student => student.countries)
+  students!: Student[];
 
   @OneToMany(() => University, (uni) => uni.country)
   universities!: University[];

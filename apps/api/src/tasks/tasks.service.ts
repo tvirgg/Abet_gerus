@@ -69,53 +69,94 @@ export class TasksService {
 
   /**
    * Основной метод: Синхронизирует задачи студента (по ID студента)
+   * Supports multi-country: loops through student.countries
    */
   async syncStudentTasks(studentId: string) {
-    const student = await this.studentRepo.findOne({ where: { id: studentId } });
-    if (!student) return;
+    console.log(`[DEBUG] 🔄 syncStudentTasks called for studentId: ${studentId}`);
+
+    const student = await this.studentRepo.findOne({
+      where: { id: studentId },
+      relations: ['countries'] // Eager load countries
+    });
+
+    if (!student) {
+      console.warn(`[DEBUG] ⚠️ Student not found: ${studentId}`);
+      return;
+    }
+
+    console.log(`[DEBUG] ✅ Student found: ${student.fullName}, Countries: ${student.countries?.length || 0}, Programs: ${JSON.stringify(student.selectedProgramIds || [])}`);
+
+    // Multi-country support: use countries array, fall back to legacy countryId
+    const countryIds = student.countries?.length > 0
+      ? student.countries.map(c => c.id)
+      : (student.countryId ? [student.countryId] : []);
+
+    if (countryIds.length === 0) {
+      console.warn(`[DEBUG] ⚠️ No countries selected for student ${student.fullName}`);
+      return;
+    }
+
+    console.log(`[DEBUG] 📍 Syncing tasks for ${countryIds.length} countries: ${countryIds.join(', ')}`);
 
     const programIds = student.selectedProgramIds || [];
-    const countryId = student.countryId;
 
-    // 1. Находим шаблоны для страны И для выбранных программ
-    const applicableTemplates = await this.templateRepo.find({
-      where: [
-        // Задачи страны (общие)
-        { countryId: countryId, programId: undefined }, // null
-        // Задачи программ
-        ...(programIds.length > 0 ? programIds.map(pid => ({ programId: pid, countryId: countryId })) : [])
-      ]
-    });
+    // Loop through each country
+    for (const countryId of countryIds) {
+      console.log(`[DEBUG] 🌍 Processing country: ${countryId}`);
 
-    if (applicableTemplates.length === 0) return;
+      // 1. Find templates for this country AND selected programs
+      const applicableTemplates = await this.templateRepo.find({
+        where: [
+          // Country-level tasks (general)
+          { countryId: countryId, programId: undefined },
+          // Program-specific tasks
+          ...(programIds.length > 0 ? programIds.map(pid => ({ programId: pid, countryId: countryId })) : [])
+        ]
+      });
 
-    // 2. Проверяем, какие уже есть
-    const existingTasks = await this.taskRepo.find({
-      where: { studentId: student.id },
-      select: ['title', 'stage']
-    });
+      console.log(`[DEBUG] 📋 Found ${applicableTemplates.length} templates for country '${countryId}'`);
 
-    const existingKeys = new Set(existingTasks.map(t => `${t.stage}-${t.title}`));
+      if (applicableTemplates.length === 0) {
+        console.error(`[DEBUG] ❌ NO TEMPLATES for countryId: '${countryId}' - check seed.ts!`);
+        continue; // Skip this country, continue with next
+      }
 
-    // 3. Создаем новые
-    const templatesToCreate = applicableTemplates.filter(tpl =>
-      !existingKeys.has(`${tpl.stage}-${tpl.title}`)
-    );
+      // 2. Check existing tasks for this country
+      const existingTasks = await this.taskRepo.find({
+        where: { studentId: student.id },
+        select: ['title', 'stage']
+      });
 
-    if (templatesToCreate.length > 0) {
-      const newTasks = templatesToCreate.map(t => this.taskRepo.create({
-        companyId: student.companyId,
-        studentId: student.id,
-        stage: t.stage,
-        title: t.title,
-        description: t.description,
-        xpReward: t.xpReward,
-        status: TaskStatus.TODO
-      }));
+      console.log(`[DEBUG] 📝 Student has ${existingTasks.length} existing tasks`);
 
-      await this.taskRepo.save(newTasks);
-      console.log(`[SyncTasks] Created ${newTasks.length} new tasks for student ${student.fullName}`);
+      const existingKeys = new Set(existingTasks.map(t => `${t.stage}-${t.title}`));
+
+      // 3. Create new tasks (prevent duplicates)
+      const templatesToCreate = applicableTemplates.filter(tpl =>
+        !existingKeys.has(`${tpl.stage}-${tpl.title}`)
+      );
+
+      console.log(`[DEBUG] 🆕 Will create ${templatesToCreate.length} new tasks for country '${countryId}'`);
+
+      if (templatesToCreate.length > 0) {
+        const newTasks = templatesToCreate.map(t => this.taskRepo.create({
+          companyId: student.companyId,
+          studentId: student.id,
+          stage: t.stage,
+          title: t.title,
+          description: t.description,
+          xpReward: t.xpReward,
+          status: TaskStatus.TODO
+        }));
+
+        await this.taskRepo.save(newTasks);
+        console.log(`[DEBUG] ✅ Created ${newTasks.length} tasks for country '${countryId}'`);
+      } else {
+        console.log(`[DEBUG] ℹ️ No new tasks for country '${countryId}' - already synced`);
+      }
     }
+
+    console.log(`[DEBUG] ✅ Sync complete for student ${student.fullName} across ${countryIds.length} countries`);
   }
 
   /**
