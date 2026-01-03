@@ -13,7 +13,7 @@ export class TaskTemplate {
 
   // --- НОВОЕ: Привязка к конкретной программе ---
   @Column({ nullable: true })
-  programId?: number; 
+  programId?: number;
 
   @Column()
   stage!: string;
@@ -29,4 +29,19 @@ export class TaskTemplate {
 
   @Column({ default: 'text' })
   submissionType!: string;
+
+  @Column({ type: 'text', nullable: true })
+  hint?: string;
+
+  @Column('text', { nullable: true })
+  advice?: string;
+
+  @Column({ type: 'jsonb', nullable: true })
+  validationRules?: any;
+
+  @Column({ nullable: true })
+  deadlineOffset?: number;
+
+  @Column('simple-array', { nullable: true })
+  accepted_formats?: string[];
 }

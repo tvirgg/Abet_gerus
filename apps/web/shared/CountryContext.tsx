@@ -26,6 +26,8 @@ export type QuestTemplate = {
   description: string;
   deadline: string;
   links_to_document_id: number | null;
+  advice?: string; // Added advice support
+  submissionType?: string;
 };
 
 export type DocumentTemplate = {
@@ -34,24 +36,23 @@ export type DocumentTemplate = {
   title: string;
 };
 
-// --- НОВОЕ: Добавлены типы для университетов и программ ---
-export type University = {
-  id: string;
-  name: string;
-  logo_url: string;
-  program_ids: number[];
-  countryId: string;
-};
-
 export type Program = {
   id: number;
   title: string;
-  category?: string; // <--- Добавлено поле
+  category?: string;
   university_id: string;
   deadline: string;
   link: string;
   image_url: string;
   required_document_ids: number[];
+};
+
+export type University = {
+  id: string;
+  name: string;
+  logo_url: string;
+  programs: Program[];
+  countryId: string;
 };
 
 type Ctx = {
@@ -85,58 +86,76 @@ export const CountryProvider: React.FC<React.PropsWithChildren> = ({ children })
   const { user } = useAuth();
   const [countries, setCountries] = useState<CountryProfile[]>([]);
   const [universities, setUniversities] = useState<University[]>([]);
+  const [programs, setPrograms] = useState<Program[]>([]);
   const [quests, setQuests] = useState<QuestTemplate[]>([]);
   const [selectedCountryId, setSelectedCountryIdState] = useState<string>("");
 
   const refreshData = async () => {
-      const token = localStorage.getItem("accessToken");
-      // Явно указываем тип, чтобы TS не ругался на несовместимость с HeadersInit
-      const headers: Record<string, string> = {};
-      if (token) {
-          headers["Authorization"] = `Bearer ${token}`;
-      }
+    const token = localStorage.getItem("accessToken");
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
 
-      try {
-        const [resC, resU, resQ] = await Promise.all([
-            fetch(`${API_URL}/countries`, { headers }),
-            fetch(`${API_URL}/admin/universities`, { headers }),
-            fetch(`${API_URL}/admin/task-templates`, { headers })
-        ]);
+    try {
+      const [resC, resU, resQ] = await Promise.all([
+        fetch(`${API_URL}/countries`, { headers }),
+        fetch(`${API_URL}/admin/universities`, { headers }),
+        fetch(`${API_URL}/admin/task-templates`, { headers })
+      ]);
 
-        if (resC.ok) {
-             const cData = await resC.json();
-             setCountries(cData.map((c: any) => ({
-                 id: c.id, name: c.name, flag_icon: c.flagIcon,
-                 required_document_ids: [], required_quest_ids: [] 
-             })));
-        }
-        if (resU.ok) {
-            const uData = await resU.json();
-            setUniversities(uData.map((u: any) => ({
-                id: u.id, name: u.name, logo_url: u.logoUrl || '🎓', program_ids: [], countryId: u.countryId
-            })));
-        }
-        if (resQ.ok) {
-            const qData = await resQ.json();
-            setQuests(qData);
-        }
-      } catch (e) {
-          console.error("Failed to load data", e);
+      if (resC.ok) {
+        const cData = await resC.json();
+        setCountries(cData.map((c: any) => ({
+          id: c.id, name: c.name, flag_icon: c.flagIcon,
+          required_document_ids: [], required_quest_ids: []
+        })));
       }
+      if (resU.ok) {
+        const uData = await resU.json();
+        const realUniversities: University[] = uData.map((u: any) => ({
+          id: u.id,
+          name: u.name,
+          logo_url: u.logoUrl || '🎓',
+          countryId: u.countryId,
+          programs: (u.programs || []).map((p: any) => ({
+            id: p.id,
+            title: p.title,
+            category: p.category,
+            university_id: u.id, // backend stores universityId, we map it
+            deadline: p.deadline,
+            link: p.link,
+            image_url: p.imageUrl,
+            required_document_ids: p.requiredDocumentIds || []
+          }))
+        }));
+        setUniversities(realUniversities);
+
+        // Flatten programs for the global list
+        const allPrograms = realUniversities.flatMap(u => u.programs);
+        setPrograms(allPrograms);
+      }
+      if (resQ.ok) {
+        const qData = await resQ.json();
+        setQuests(qData);
+      }
+    } catch (e) {
+      console.error("Failed to load data", e);
+    }
   };
 
   useEffect(() => {
-      refreshData();
+    refreshData();
   }, [user]);
 
   useEffect(() => {
-      if (countries.length > 0 && !selectedCountryId) {
-          if (user?.countryId) {
-              setSelectedCountryIdState(user.countryId);
-          } else {
-              setSelectedCountryIdState(countries[0].id);
-          }
+    if (countries.length > 0 && !selectedCountryId) {
+      if (user?.countryId) {
+        setSelectedCountryIdState(user.countryId);
+      } else {
+        setSelectedCountryIdState(countries[0].id);
       }
+    }
   }, [countries, user]);
 
   const setSelectedCountryId = (id: string) => {
@@ -148,17 +167,16 @@ export const CountryProvider: React.FC<React.PropsWithChildren> = ({ children })
     [countries, selectedCountryId]
   );
 
-  // Используем any для расширения типа контекста в рантайме, либо нужно обновить тип Ctx выше
   const value: any = {
     countries,
     selectedCountryId,
     setSelectedCountryId,
     selectedCountry,
-    quests, // Теперь динамические квесты
+    quests,
     documents: docTemplates as DocumentTemplate[],
-    universities, // Теперь динамические вузы
-    programs: programTemplates as Program[],
-    refreshData, // Экспортируем функцию обновления
+    universities,
+    programs,
+    refreshData,
   };
 
   return <CountryCtx.Provider value={value}>{children}</CountryCtx.Provider>;

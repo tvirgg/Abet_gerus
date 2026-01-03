@@ -1,9 +1,10 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { Repository, In, IsNull } from "typeorm";
 import { Task } from "../entities/task.entity";
 import { Student } from "../entities/student.entity";
 import { TaskTemplate } from "../entities/task-template.entity";
+import { Program } from "../entities/program.entity";
 import { TaskStatus } from "../entities/enums";
 import archiver from 'archiver';
 import { FilesService } from "../files/files.service";
@@ -14,6 +15,7 @@ export class TasksService {
     @InjectRepository(Task) private taskRepo: Repository<Task>,
     @InjectRepository(Student) private studentRepo: Repository<Student>,
     @InjectRepository(TaskTemplate) private templateRepo: Repository<TaskTemplate>,
+    @InjectRepository(Program) private programRepo: Repository<Program>,
     private filesService: FilesService
   ) { }
 
@@ -69,14 +71,14 @@ export class TasksService {
 
   /**
    * Основной метод: Синхронизирует задачи студента (по ID студента)
-   * Supports multi-country: loops through student.countries
+   * Supports Cascading Hierarchy: Country -> University -> Program
    */
   async syncStudentTasks(studentId: string) {
     console.log(`[DEBUG] 🔄 syncStudentTasks called for studentId: ${studentId}`);
 
     const student = await this.studentRepo.findOne({
       where: { id: studentId },
-      relations: ['countries'] // Eager load countries
+      relations: ['countries']
     });
 
     if (!student) {
@@ -84,79 +86,132 @@ export class TasksService {
       return;
     }
 
-    console.log(`[DEBUG] ✅ Student found: ${student.fullName}, Countries: ${student.countries?.length || 0}, Programs: ${JSON.stringify(student.selectedProgramIds || [])}`);
-
-    // Multi-country support: use countries array, fall back to legacy countryId
+    // 1. Resolve Contexts
     const countryIds = student.countries?.length > 0
       ? student.countries.map(c => c.id)
       : (student.countryId ? [student.countryId] : []);
 
-    if (countryIds.length === 0) {
-      console.warn(`[DEBUG] ⚠️ No countries selected for student ${student.fullName}`);
+    const programIds = student.selectedProgramIds || [];
+
+    // Resolve University IDs from Programs
+    let universityIds: string[] = [];
+    if (programIds.length > 0) {
+      const programs = await this.programRepo.find({
+        where: { id: In(programIds) },
+        select: ['universityId']
+      });
+      universityIds = [...new Set(programs.map(p => p.universityId))];
+    }
+
+    console.log(`[DEBUG] 📍 Contexts - Countries: [${countryIds}], Unis: [${universityIds}], Programs: [${programIds}]`);
+
+    // 2. Fetch Templates (Cascading Logic)
+    // We want tasks that match ANY of the specific contexts.
+    // Use IsNull() to ensure we pick the specific level's generic tasks, avoiding over-matching if data is messy.
+
+    const whereConditions: any[] = [];
+
+    // Level 1: Country Generic Tasks (No Uni/Program specific)
+    if (countryIds.length > 0) {
+      whereConditions.push({
+        countryId: In(countryIds),
+        universityId: IsNull(),
+        programId: IsNull()
+      });
+    }
+
+    // Level 2: University Tasks (No Program specific)
+    if (universityIds.length > 0) {
+      whereConditions.push({
+        universityId: In(universityIds),
+        programId: IsNull()
+      });
+    }
+
+    // Level 3: Program Specific Tasks
+    if (programIds.length > 0) {
+      whereConditions.push({
+        programId: In(programIds)
+      });
+    }
+
+    if (whereConditions.length === 0) {
+      console.log(`[DEBUG] ℹ️ No active contexts (countries/programs) for student, skipping sync.`);
       return;
     }
 
-    console.log(`[DEBUG] 📍 Syncing tasks for ${countryIds.length} countries: ${countryIds.join(', ')}`);
+    const applicableTemplates = await this.templateRepo.find({
+      where: whereConditions
+    });
 
-    const programIds = student.selectedProgramIds || [];
+    console.log(`[DEBUG] 📋 Found ${applicableTemplates.length} applicable templates (Total)`);
 
-    // Loop through each country
-    for (const countryId of countryIds) {
-      console.log(`[DEBUG] 🌍 Processing country: ${countryId}`);
+    // 3. Deduplicate Templates (Logic: latest by stage+title? Or just union?)
+    // Currently, we just union them. If a task exists in multiple levels with same title/stage, we should likely prefer the MORE SPECIFIC one?
+    // "Cascading" implies specifics override generals. 
+    // Implementation: Group by key (stage+title), pick logic. For now, we'll process all unique combinations.
+    // BUT: If "Upload Passport" is at Country level AND Program level (super specific passport?), we might want only one.
+    // Standard logic: Group by 'title' (or unique code).
+    // Let's assume unique 'title' per 'stage' is the key.
 
-      // 1. Find templates for this country AND selected programs
-      const applicableTemplates = await this.templateRepo.find({
-        where: [
-          // Country-level tasks (general)
-          { countryId: countryId, programId: undefined },
-          // Program-specific tasks
-          ...(programIds.length > 0 ? programIds.map(pid => ({ programId: pid, countryId: countryId })) : [])
-        ]
-      });
+    // Priorities: Program > University > Country
+    const templateMap = new Map<string, TaskTemplate>();
 
-      console.log(`[DEBUG] 📋 Found ${applicableTemplates.length} templates for country '${countryId}'`);
+    // Sort to process specific first? No, map overwrites.
+    // We want Higher Priority to stay in the map.
+    // Let's iterate and inserting based on priority score.
+    const getPriority = (t: TaskTemplate) => {
+      if (t.programId) return 3;
+      if (t.universityId) return 2;
+      if (t.countryId) return 1;
+      return 0;
+    };
 
-      if (applicableTemplates.length === 0) {
-        console.error(`[DEBUG] ❌ NO TEMPLATES for countryId: '${countryId}' - check seed.ts!`);
-        continue; // Skip this country, continue with next
-      }
+    for (const tpl of applicableTemplates) {
+      const key = `${tpl.stage}-${tpl.title}`;
+      const existing = templateMap.get(key);
 
-      // 2. Check existing tasks for this country
-      const existingTasks = await this.taskRepo.find({
-        where: { studentId: student.id },
-        select: ['title', 'stage']
-      });
-
-      console.log(`[DEBUG] 📝 Student has ${existingTasks.length} existing tasks`);
-
-      const existingKeys = new Set(existingTasks.map(t => `${t.stage}-${t.title}`));
-
-      // 3. Create new tasks (prevent duplicates)
-      const templatesToCreate = applicableTemplates.filter(tpl =>
-        !existingKeys.has(`${tpl.stage}-${tpl.title}`)
-      );
-
-      console.log(`[DEBUG] 🆕 Will create ${templatesToCreate.length} new tasks for country '${countryId}'`);
-
-      if (templatesToCreate.length > 0) {
-        const newTasks = templatesToCreate.map(t => this.taskRepo.create({
-          companyId: student.companyId,
-          studentId: student.id,
-          stage: t.stage,
-          title: t.title,
-          description: t.description,
-          xpReward: t.xpReward,
-          status: TaskStatus.TODO
-        }));
-
-        await this.taskRepo.save(newTasks);
-        console.log(`[DEBUG] ✅ Created ${newTasks.length} tasks for country '${countryId}'`);
-      } else {
-        console.log(`[DEBUG] ℹ️ No new tasks for country '${countryId}' - already synced`);
+      if (!existing || getPriority(tpl) > getPriority(existing)) {
+        templateMap.set(key, tpl);
       }
     }
 
-    console.log(`[DEBUG] ✅ Sync complete for student ${student.fullName} across ${countryIds.length} countries`);
+    const finalTemplates = Array.from(templateMap.values());
+    console.log(`[DEBUG] 📉 After deduplication/override: ${finalTemplates.length} templates`);
+
+    // 4. Create Missing Tasks
+    const existingTasks = await this.taskRepo.find({
+      where: { studentId: student.id },
+      select: ['title', 'stage']
+    });
+
+    const existingKeys = new Set(existingTasks.map(t => `${t.stage}-${t.title}`));
+    const templatesToCreate = finalTemplates.filter(tpl =>
+      !existingKeys.has(`${tpl.stage}-${tpl.title}`)
+    );
+
+    console.log(`[DEBUG] 🆕 Will create ${templatesToCreate.length} new tasks`);
+
+    if (templatesToCreate.length > 0) {
+      const newTasks = templatesToCreate.map(t => this.taskRepo.create({
+        companyId: student.companyId,
+        studentId: student.id,
+        stage: t.stage,
+        title: t.title,
+        description: t.description,
+        xpReward: t.xpReward,
+        status: TaskStatus.TODO,
+        submission_type: t.submissionType as any,
+        hint: t.hint,
+        advice: t.advice, // Populate advice
+        accepted_formats: t.accepted_formats
+      }));
+
+      await this.taskRepo.save(newTasks);
+      console.log(`[DEBUG] ✅ Created ${newTasks.length} tasks`);
+    } else {
+      console.log(`[DEBUG] ℹ️ No new tasks to create`);
+    }
   }
 
   /**

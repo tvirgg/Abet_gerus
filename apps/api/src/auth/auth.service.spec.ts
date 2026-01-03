@@ -7,13 +7,36 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { User } from '../entities/user.entity';
 import { Student } from '../entities/student.entity';
 import { Company } from '../entities/company.entity';
+import { Country } from '../entities/country.entity';
 import { DataSource } from 'typeorm';
 import { Role } from '../entities/enums';
 import { UnauthorizedException, BadRequestException } from '@nestjs/common';
 
 // Mocks
-const mockRepo = {
+const mockUserRepo = {
   findOne: jest.fn(),
+  create: jest.fn(),
+  save: jest.fn(),
+  update: jest.fn(),
+};
+
+const mockStudentRepo = {
+  findOne: jest.fn(),
+  create: jest.fn(),
+  save: jest.fn(),
+  update: jest.fn(),
+};
+
+const mockCompanyRepo = {
+  findOne: jest.fn(),
+  create: jest.fn(),
+  save: jest.fn(),
+  update: jest.fn(),
+};
+
+const mockCountryRepo = {
+  findOne: jest.fn(),
+  find: jest.fn(),
   create: jest.fn(),
   save: jest.fn(),
   update: jest.fn(),
@@ -56,9 +79,10 @@ describe('AuthService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
-        { provide: getRepositoryToken(User), useValue: { ...mockRepo } },
-        { provide: getRepositoryToken(Student), useValue: { ...mockRepo } },
-        { provide: getRepositoryToken(Company), useValue: { ...mockRepo } },
+        { provide: getRepositoryToken(User), useValue: mockUserRepo },
+        { provide: getRepositoryToken(Student), useValue: mockStudentRepo },
+        { provide: getRepositoryToken(Company), useValue: mockCompanyRepo },
+        { provide: getRepositoryToken(Country), useValue: mockCountryRepo },
         { provide: DataSource, useValue: mockDataSource },
         { provide: CamundaService, useValue: mockCamunda },
         { provide: JwtService, useValue: mockJwt },

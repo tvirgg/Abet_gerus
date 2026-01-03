@@ -5,7 +5,7 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 @Controller("admin")
 @UseGuards(JwtAuthGuard)
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(private readonly adminService: AdminService) { }
 
   @Post("countries")
   createCountry(@Body() dto: any) {
@@ -40,8 +40,14 @@ export class AdminController {
 
   @Delete("task-templates/:id")
   deleteTaskTemplate(@Param("id") id: string) {
-      return this.adminService.deleteTaskTemplate(Number(id));
+    return this.adminService.deleteTaskTemplate(Number(id));
   }
+
+  @Get("hierarchy/:context/:id/tasks")
+  getHierarchyTasks(@Param("context") context: string, @Param("id") id: string) {
+    return this.adminService.getHierarchyTasks(context as any, id);
+  }
+
 
   // --- Programs Endpoints (ВАЖНО: этот блок должен быть здесь) ---
   @Get("programs/search")
@@ -120,9 +126,9 @@ export class AdminController {
   deleteStudent(@Param("id") id: string) {
     return this.adminService.deleteStudent(id);
   }
-  
+
   @Patch("users/:id/reset-password")
   resetPassword(@Param("id") id: string, @Body("password") password?: string) {
-      return this.adminService.resetPassword(id, password);
+    return this.adminService.resetPassword(id, password);
   }
 }

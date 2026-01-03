@@ -17,15 +17,15 @@ export default function QuestEditModal({ quest, onSave, onClose }: Props) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
-    setFormData((prev: any) => ({ 
-        ...prev, 
-        [name]: type === 'checkbox' ? checked : (name === 'xpReward' ? Number(value) : value) 
+    setFormData((prev: any) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : (name === 'xpReward' ? Number(value) : value)
     }));
   };
-  
+
   const handleSubmit = (e: React.FormEvent) => {
-      e.preventDefault();
-      onSave(formData);
+    e.preventDefault();
+    onSave(formData);
   }
 
   return (
@@ -38,64 +38,99 @@ export default function QuestEditModal({ quest, onSave, onClose }: Props) {
               <label className="text-xs text-zinc-400">Название</label>
               <input type="text" name="title" value={formData.title} onChange={handleChange} className="w-full mt-1 input-style" required />
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
-                <div>
-                   <label className="text-xs text-zinc-400">Этап (Stage)</label>
-                   <input type="text" name="stage" value={formData.stage} onChange={handleChange} className="w-full mt-1 input-style" list="stages" />
-                   <datalist id="stages">
-                       <option value="Подготовка" />
-                       <option value="Документы" />
-                       <option value="Виза" />
-                       <option value="Экзамены" />
-                   </datalist>
-                </div>
-                <div>
-                   <label className="text-xs text-zinc-400">Опыт (XP)</label>
-                   <input type="number" name="xpReward" value={formData.xpReward} onChange={handleChange} className="w-full mt-1 input-style" />
-                </div>
+              <div>
+                <label className="text-xs text-zinc-400">Этап (Stage)</label>
+                <input type="text" name="stage" value={formData.stage} onChange={handleChange} className="w-full mt-1 input-style" list="stages" />
+                <datalist id="stages">
+                  <option value="Подготовка" />
+                  <option value="Документы" />
+                  <option value="Виза" />
+                  <option value="Экзамены" />
+                </datalist>
+              </div>
+              <div>
+                <label className="text-xs text-zinc-400">Опыт (XP)</label>
+                <input type="number" name="xpReward" value={formData.xpReward} onChange={handleChange} className="w-full mt-1 input-style" />
+              </div>
             </div>
 
             <div>
-               <label className="text-xs text-zinc-400">Тип сдачи</label>
-               <select name="submissionType" value={formData.submissionType || 'text'} onChange={handleChange} className="w-full mt-1 input-style appearance-none">
-                   <option value="text">Текст</option>
-                   <option value="file">Файл (PDF/Img)</option>
-                   <option value="link">Ссылка</option>
-                   <option value="none">Без ответа (Чекбокс)</option>
-                   <option value="credentials">Доступы (Логин/Пароль)</option>
-               </select>
+              <label className="text-xs text-zinc-400">Тип сдачи</label>
+              <select name="submissionType" value={formData.submissionType || 'text'} onChange={handleChange} className="w-full mt-1 input-style appearance-none">
+                <option value="text">Текст</option>
+                <option value="file">Файл (PDF/Img)</option>
+                <option value="link">Ссылка</option>
+                <option value="none">Без ответа (Чекбокс)</option>
+                <option value="credentials">Доступы (Логин/Пароль)</option>
+              </select>
             </div>
 
             <div>
-               <label className="text-xs text-zinc-400">Дедлайн (текст или смещение)</label>
-               <input 
-                   type="text" 
-                   name="deadline" 
-                   value={formData.deadline || ''} 
-                   onChange={handleChange} 
-                   className="w-full mt-1 input-style" 
-                   placeholder="Напр: 2026-05-01 или +30 дней" 
-               />
+              <label className="text-xs text-zinc-400">Дедлайн (текст или смещение)</label>
+              <input
+                type="text"
+                name="deadline"
+                value={formData.deadline || ''}
+                onChange={handleChange}
+                className="w-full mt-1 input-style"
+                placeholder="Напр: 2026-05-01 или +30 дней"
+              />
             </div>
 
             <div>
               <label className="text-xs text-zinc-400">Описание</label>
-              <textarea name="description" value={formData.description} onChange={handleChange} rows={4} className="w-full mt-1 input-style" />
+              <textarea name="description" value={formData.description} onChange={handleChange} rows={3} className="w-full mt-1 input-style" />
+            </div>
+
+            {/* Advice Field */}
+            <div>
+              <label className="text-xs text-zinc-400">Совет / Инструкция (HTML)</label>
+              <textarea name="advice" value={formData.advice || ''} onChange={handleChange} rows={3} className="w-full mt-1 input-style font-mono text-sm" placeholder="<p>Используйте этот сервис...</p>" />
+            </div>
+
+            {/* Submission Configuration */}
+            {formData.submissionType === 'file' && (
+              <div>
+                <label className="text-xs text-zinc-400">Допустимые форматы (через запятую)</label>
+                <input type="text" name="accepted_formats" value={formData.accepted_formats ? formData.accepted_formats.join(',') : ''} onChange={(e) => setFormData((p: any) => ({ ...p, accepted_formats: e.target.value.split(',').map((s: string) => s.trim()) }))} className="w-full mt-1 input-style" placeholder="pdf, jpg, png" />
+              </div>
+            )}
+
+            {/* Advanced Validation */}
+            <div>
+              <label className="text-xs text-zinc-400">Правила валидации (JSON)</label>
+              <textarea
+                name="validationRules"
+                value={typeof formData.validationRules === 'object' ? JSON.stringify(formData.validationRules) : formData.validationRules || ''}
+                onChange={(e) => {
+                  try {
+                    const json = JSON.parse(e.target.value);
+                    setFormData((p: any) => ({ ...p, validationRules: json }));
+                  } catch (err) {
+                    // Allow typing invalid json temporarily
+                    setFormData((p: any) => ({ ...p, validationRules: e.target.value }));
+                  }
+                }}
+                rows={2}
+                className="w-full mt-1 input-style font-mono text-xs text-zinc-500"
+                placeholder='{"checkUrl": true, "maxSize": 5000000}'
+              />
             </div>
 
             <div className="flex items-center gap-3 p-3 bg-zinc-800/50 rounded-lg border border-zinc-800">
-               <input 
-                   type="checkbox" 
-                   name="isCritical" 
-                   id="isCritical"
-                   checked={formData.isCritical || false} 
-                   onChange={handleChange} 
-                   className="w-4 h-4 rounded border-zinc-600 bg-zinc-700 text-red-600 focus:ring-red-500" 
-               />
-               <label htmlFor="isCritical" className="text-sm select-none cursor-pointer text-zinc-300">
-                   Критическая задача (блокирует прогресс)
-               </label>
+              <input
+                type="checkbox"
+                name="isCritical"
+                id="isCritical"
+                checked={formData.isCritical || false}
+                onChange={handleChange}
+                className="w-4 h-4 rounded border-zinc-600 bg-zinc-700 text-red-600 focus:ring-red-500"
+              />
+              <label htmlFor="isCritical" className="text-sm select-none cursor-pointer text-zinc-300">
+                Критическая задача (блокирует прогресс)
+              </label>
             </div>
 
           </div>

@@ -2,7 +2,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { DocumentTemplate } from '../entities/document-template.entity';
+import { DocumentTemplate, DocumentType } from '../entities/document-template.entity';
 import { StudentDocument, DocumentStatus } from '../entities/student-document.entity';
 import { FilesService } from '../files/files.service';
 import { Student } from '../entities/student.entity';
@@ -23,8 +23,11 @@ export class DocumentsService {
     ) { }
 
     async getRequirements(userId: string) {
-        // 1. Get student by userId
-        const student = await this.studentRepo.findOne({ where: { userId } });
+        // 1. Get student by userId with countries relation
+        const student = await this.studentRepo.findOne({
+            where: { userId },
+            relations: ['countries']
+        });
         if (!student) {
             throw new NotFoundException('Student profile not found');
         }
@@ -39,15 +42,37 @@ export class DocumentsService {
             where: { studentId: student.id },
         });
 
-        // 4. Merge info
-        const requirements = templates.map((tmpl) => {
-            const doc = existingDocs.find((d) => d.templateId === tmpl.id);
-            return {
-                ...tmpl,
-                studentDocument: doc || null,
-                status: doc ? doc.status : DocumentStatus.MISSING,
-            };
-        });
+        // 4. Build set of existing document template IDs for deduplication
+        // This prevents duplicate requests for country-agnostic documents (e.g., Passport)
+        const existingDocumentTemplateIds = new Set<number>(
+            existingDocs
+                .filter(doc => doc.status === DocumentStatus.APPROVED || doc.status === DocumentStatus.PENDING)
+                .map(doc => doc.templateId)
+        );
+
+        // 5. Filter and merge info
+        // For country-agnostic documents (e.g., PASSPORT), only show if not already uploaded
+        const requirements = templates
+            .filter((tmpl) => {
+                // Check if this is a country-agnostic document type
+                const isCountryAgnostic = tmpl.document_type === DocumentType.PASSPORT;
+
+                // If it's country-agnostic and already exists, filter it out
+                if (isCountryAgnostic && existingDocumentTemplateIds.has(tmpl.id)) {
+                    return false;
+                }
+
+                // Otherwise, include the template
+                return true;
+            })
+            .map((tmpl) => {
+                const doc = existingDocs.find((d) => d.templateId === tmpl.id);
+                return {
+                    ...tmpl,
+                    studentDocument: doc || null,
+                    status: doc ? doc.status : DocumentStatus.MISSING,
+                };
+            });
 
         return requirements;
     }

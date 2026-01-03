@@ -6,10 +6,11 @@ import { Task } from "../entities/task.entity";
 import { Student } from "../entities/student.entity";
 import { TaskTemplate } from "../entities/task-template.entity"; // <-- Добавили
 import { FilesModule } from "../files/files.module";
+import { Program } from "../entities/program.entity";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Task, Student, TaskTemplate]),
+    TypeOrmModule.forFeature([Task, Student, TaskTemplate, Program]),
     FilesModule // Import FilesModule
   ],
   providers: [TasksService],

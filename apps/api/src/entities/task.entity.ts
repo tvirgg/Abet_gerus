@@ -34,4 +34,17 @@ export class Task {
 
   @Column('jsonb', { nullable: true })
   submission?: any;
+
+  // NEW: Custom quest form fields
+  @Column({ type: 'varchar', nullable: true, default: 'text' })
+  submission_type?: 'none' | 'text' | 'link' | 'file' | 'credentials';
+
+  @Column({ type: 'text', nullable: true })
+  hint?: string;
+
+  @Column('simple-array', { nullable: true })
+  accepted_formats?: string[];
+
+  @Column({ type: 'text', nullable: true })
+  advice?: string;
 }

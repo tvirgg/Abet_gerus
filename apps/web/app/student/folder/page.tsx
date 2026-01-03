@@ -7,6 +7,9 @@ export default function FolderPage() {
   const { documents, selectedCountry, quests } = useCountry();
   const { tasks } = useProgress(); // Используем tasks вместо progress
 
+  // CRITICAL FIX: useState must be called BEFORE any conditional returns
+  const [isDownloading, setIsDownloading] = useState(false);
+
   const completedDocumentIds = useMemo(() => {
     const doneDocIds = new Set<number>();
     if (!selectedCountry) return doneDocIds;
@@ -31,8 +34,6 @@ export default function FolderPage() {
 
   const required = new Set(selectedCountry.required_document_ids);
   const filtered = documents.filter((d) => required.has(d.id) && completedDocumentIds.has(d.id));
-
-  const [isDownloading, setIsDownloading] = useState(false);
 
   const handleDownload = async () => {
     try {

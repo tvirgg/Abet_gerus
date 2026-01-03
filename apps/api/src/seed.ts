@@ -127,22 +127,126 @@ async function seed() {
 
     // Austria TaskTemplates
     const austriaTasks = [
-        { countryId: 'at', title: "Загрузить скан загранпаспорта", stage: "Документы", xpReward: 20, description: "Загрузите PDF скан главной страницы паспорта." },
-        { countryId: 'at', title: "Сделать фото для визы", stage: "Документы", xpReward: 15, description: "Фото 3.5х4.5 на белом фоне." },
-        { countryId: 'at', title: "Перевести аттестат/диплом", stage: "Документы", xpReward: 50, description: "Нотариально заверенный перевод на английский или немецкий." },
-        { countryId: 'at', title: "Выбрать программу обучения", stage: "Подготовка", xpReward: 10, description: "Изучите программы в австрийских университетах." },
-        { countryId: 'at', title: "Написать мотивационное письмо", stage: "Творчество", xpReward: 60, description: "Черновик письма на немецком или английском." },
-        { countryId: 'at', title: "Подать заявку на визу", stage: "Виза", xpReward: 100, description: "Запись в консульство Австрии." }
+        {
+            countryId: 'at',
+            title: "Загрузить скан загранпаспорта",
+            stage: "Документы",
+            xpReward: 20,
+            description: "Загрузите PDF скан главной страницы паспорта.",
+            submissionType: 'file',
+            hint: "Загрузите цветной скан главного разворота паспорта. Убедитесь, что все данные читаемы.",
+            accepted_formats: ['pdf', 'jpg', 'jpeg', 'png']
+        },
+        {
+            countryId: 'at',
+            title: "Сделать фото для визы",
+            stage: "Документы",
+            xpReward: 15,
+            description: "Фото 3.5х4.5 на белом фоне.",
+            submissionType: 'file',
+            hint: "Загрузите биометрическое фото: 3.5x4.5 см, белый фон, без очков и головных уборов.",
+            accepted_formats: ['jpg', 'jpeg', 'png']
+        },
+        {
+            countryId: 'at',
+            title: "Перевести аттестат/диплом",
+            stage: "Документы",
+            xpReward: 50,
+            description: "Нотариально заверенный перевод на английский или немецкий.",
+            submissionType: 'file',
+            hint: "Загрузите скан нотариально заверенного перевода, сшитого с копией оригинального документа.",
+            accepted_formats: ['pdf']
+        },
+        {
+            countryId: 'at',
+            title: "Выбрать программу обучения",
+            stage: "Подготовка",
+            xpReward: 10,
+            description: "Изучите программы в австрийских университетах.",
+            submissionType: 'text',
+            hint: "Напишите название выбранной программы и университета. Укажите, почему вы выбрали именно её."
+        },
+        {
+            countryId: 'at',
+            title: "Написать мотивационное письмо",
+            stage: "Творчество",
+            xpReward: 60,
+            description: "Черновик письма на немецком или английском.",
+            submissionType: 'file',
+            hint: "Напишите мотивационное письмо (1-2 страницы) о ваших целях и причинах выбора этой программы.",
+            accepted_formats: ['pdf', 'doc', 'docx']
+        },
+        {
+            countryId: 'at',
+            title: "Подать заявку на визу",
+            stage: "Виза",
+            xpReward: 100,
+            description: "Запись в консульство Австрии.",
+            submissionType: 'link',
+            hint: "Вставьте ссылку на подтверждение записи в консульство или скриншот подтверждения."
+        }
     ];
 
     // Italy TaskTemplates
     const italyTasks = [
-        { countryId: 'it', title: "Загрузить скан загранпаспорта", stage: "Документы", xpReward: 20, description: "Загрузите PDF скан главной страницы паспорта." },
-        { countryId: 'it', title: "Сделать фото для визы", stage: "Документы", xpReward: 15, description: "Фото 3.5х4.5 на белом фоне." },
-        { countryId: 'it', title: "Перевести аттестат/диплом", stage: "Документы", xpReward: 50, description: "Нотариально заверенный перевод на итальянский или английский." },
-        { countryId: 'it', title: "Выбрать программу обучения", stage: "Подготовка", xpReward: 10, description: "Изучите программы в итальянских университетах." },
-        { countryId: 'it', title: "Написать мотивационное письмо", stage: "Творчество", xpReward: 60, description: "Черновик письма на итальянском или английском." },
-        { countryId: 'it', title: "Подать заявку на визу", stage: "Виза", xpReward: 100, description: "Запись в консульство Италии." }
+        {
+            countryId: 'it',
+            title: "Загрузить скан загранпаспорта",
+            stage: "Документы",
+            xpReward: 20,
+            description: "Загрузите PDF скан главной страницы паспорта.",
+            submissionType: 'file',
+            hint: "Загрузите цветной скан главного разворота паспорта. Убедитесь, что все данные читаемы.",
+            accepted_formats: ['pdf', 'jpg', 'jpeg', 'png']
+        },
+        {
+            countryId: 'it',
+            title: "Сделать фото для визы",
+            stage: "Документы",
+            xpReward: 15,
+            description: "Фото 3.5х4.5 на белом фоне.",
+            submissionType: 'file',
+            hint: "Загрузите биометрическое фото: 3.5x4.5 см, белый фон, без очков и головных уборов.",
+            accepted_formats: ['jpg', 'jpeg', 'png']
+        },
+        {
+            countryId: 'it',
+            title: "Перевести аттестат/диплом",
+            stage: "Документы",
+            xpReward: 50,
+            description: "Нотариально заверенный перевод на итальянский или английский.",
+            submissionType: 'file',
+            hint: "Загрузите скан нотариально заверенного перевода на итальянский или английский язык.",
+            accepted_formats: ['pdf']
+        },
+        {
+            countryId: 'it',
+            title: "Выбрать программу обучения",
+            stage: "Подготовка",
+            xpReward: 10,
+            description: "Изучите программы в итальянских университетах.",
+            submissionType: 'text',
+            hint: "Напишите название выбранной программы и университета в Италии."
+        },
+        {
+            countryId: 'it',
+            title: "Написать мотивационное письмо",
+            stage: "Творчество",
+            xpReward: 60,
+            description: "Черновик письма на итальянском или английском.",
+            submissionType: 'file',
+            hint: "Напишите мотивационное письмо на итальянском или английском языке.",
+            accepted_formats: ['pdf', 'doc', 'docx']
+        },
+        {
+            countryId: 'it',
+            title: "Подать заявку на визу",
+            stage: "Виза",
+            xpReward: 100,
+            description: "Запись в консульство Италии.",
+            submissionType: 'link',
+            hint: "Вставьте ссылку на подтверждение записи в консульство Италии."
+        }
     ];
 
     const allTaskTemplates = [...austriaTasks, ...italyTasks];
@@ -155,7 +259,56 @@ async function seed() {
             await taskTplRepo.save(taskTplRepo.create(t));
         }
     }
-    console.log(`✅ TaskTemplates seeded: ${allTaskTemplates.length} templates`);
+    console.log(`✅ TaskTemplates seeded: ${allTaskTemplates.length} templates (Base Country Level)`);
+
+    // =========================================================
+    // 4.1. Hierarchical TaskTemplates (University & Program Level)
+    // =========================================================
+
+    // 1. University Level Task (e.g. Vienna Registration)
+    const viennaUni = await uniRepo.findOne({ where: { name: 'University of Vienna' } });
+    if (viennaUni) {
+        const viennaTask = taskTplRepo.create({
+            universityId: viennaUni.id,
+            title: "Регистрация в u:space (Vienna)",
+            stage: "Поступление",
+            xpReward: 30,
+            description: "Создайте аккаунт в системе u:space университета Вены.",
+            submissionType: 'link',
+            advice: "<h3>Инструкция по регистрации</h3><p>Перейдите на <a href='https://uspace.univie.ac.at'>uspace.univie.ac.at</a> и нажмите 'Registration'.</p>",
+            validationRules: { checkUrl: true },
+            deadlineOffset: 7 // дней от создания
+        });
+
+        const existing = await taskTplRepo.findOne({ where: { universityId: viennaUni.id, title: viennaTask.title } });
+        if (!existing) {
+            await taskTplRepo.save(viennaTask);
+            console.log("✅ University-level task created (Vienna)");
+        }
+    }
+
+    // 2. Program Level Task (e.g. Business Administration specific)
+    const businessProg = await progRepo.findOne({ where: { title: 'Business Administration (BSc)' } });
+    if (businessProg) {
+        const progTask = taskTplRepo.create({
+            programId: businessProg.id,
+            title: "Загрузить GMAT/GRE (Business)",
+            stage: "Документы",
+            xpReward: 100,
+            description: "Для бизнес-программ часто требуется тест GMAT.",
+            submissionType: 'file',
+            advice: "Загрузите сертификат GMAT с баллом не ниже 600.",
+            accepted_formats: ['pdf'],
+            validationRules: { maxSize: 5242880 } // 5MB
+        });
+
+        const existing = await taskTplRepo.findOne({ where: { programId: businessProg.id, title: progTask.title } });
+        if (!existing) {
+            await taskTplRepo.save(progTask);
+            console.log("✅ Program-level task created (Business Admin)");
+        }
+    }
+
 
     // =========================================================
     // 5. Users & Students

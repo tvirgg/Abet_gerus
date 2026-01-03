@@ -7,13 +7,16 @@ export type StudentFull = {
   id: string;
   fullName: string;
   email: string;
-  countryId: string;
+  countryId: string; // Legacy: for backward compatibility
+  countryIds?: string[]; // NEW: Multi-country support
+  countries?: Array<{ id: string; name: string; flag_icon: string }>; // NEW: Loaded countries
   xpTotal: number;
-  password?: string; // <--- Добавили
+  password?: string;
   isActive: boolean;
   bindingCode: string;
-  curatorId?: string; // Новое поле
-  curatorName?: string; // Новое поле
+  curatorId?: string;
+  curatorName?: string;
+  selectedProgramIds?: number[]; // NEW: Program selection
 };
 
 type Props = {
@@ -26,7 +29,7 @@ type Props = {
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
 
 export default function StudentModal({ student, onClose, onSave, onDelete }: Props) {
-  const { countries } = useCountry();
+  const { countries, universities } = useCountry(); // Destructure universities
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const isEdit = !!student;
@@ -40,7 +43,25 @@ export default function StudentModal({ student, onClose, onSave, onDelete }: Pro
   const [email, setEmail] = useState(student?.email || "");
   const [password, setPassword] = useState(student?.password || ""); // <--- State для пароля
   const [showPassword, setShowPassword] = useState(false); // <--- Глаз
-  const [countryId, setCountryId] = useState(student?.countryId || countries[0]?.id || "");
+
+  // Multi-country support: Use array of country IDs
+  const [countryIds, setCountryIds] = useState<string[]>(() => {
+    if (student?.countries && student.countries.length > 0) {
+      return student.countries.map(c => c.id);
+    }
+    if (student?.countryIds && student.countryIds.length > 0) {
+      return student.countryIds;
+    }
+    // Fallback to legacy countryId if available
+    if (student?.countryId) {
+      return [student.countryId];
+    }
+    // Default: select first country
+    return countries[0]?.id ? [countries[0].id] : [];
+  });
+
+  const [selectedProgramIds, setSelectedProgramIds] = useState<number[]>(student?.selectedProgramIds || []);
+
   const [isActive, setIsActive] = useState(student?.isActive ?? true);
   const [curatorId, setCuratorId] = useState(student?.curatorId || "");
 
@@ -68,15 +89,26 @@ export default function StudentModal({ student, onClose, onSave, onDelete }: Pro
     if (student) {
       setFullName(student.fullName);
       setEmail(student.email);
-      setPassword(student.password || ""); // <--- Заполняем при редактировании
-      setCountryId(student.countryId || ""); // FIX: Ensure it's not null
+      setPassword(student.password || "");
+
+      // Initialize countryIds from student data
+      if (student.countries && student.countries.length > 0) {
+        setCountryIds(student.countries.map(c => c.id));
+      } else if (student.countryIds && student.countryIds.length > 0) {
+        setCountryIds(student.countryIds);
+      } else if (student.countryId) {
+        setCountryIds([student.countryId]);
+      }
+      setSelectedProgramIds(student.selectedProgramIds || []);
+
+
       setIsActive(student.isActive ?? true);
       setCuratorId(student.curatorId || "");
     } else {
       setFullName("");
       setEmail("");
-      setPassword(""); // Можно сгенерировать дефолтный: Math.random().toString(36).slice(-8)
-      setCountryId(countries[0]?.id || "");
+      setPassword("");
+      setCountryIds(countries[0]?.id ? [countries[0].id] : []);
       setIsActive(true);
       // Если создает куратор, ставим его сразу
       if (user?.role === 'curator' && user.curatorId) {
@@ -89,15 +121,23 @@ export default function StudentModal({ student, onClose, onSave, onDelete }: Pro
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+
+    // Validate at least one country is selected
+    if (countryIds.length === 0) {
+      alert("Выберите хотя бы одну страну");
+      return;
+    }
+
     setLoading(true);
 
     const data: Partial<StudentFull> & { password?: string } = {
       fullName,
       email,
-      password: password || undefined, // Отправляем, только если не пустой (для новых обязателен на бэке)
-      countryId,
+      password: password || undefined,
+      countryIds, // Send array of country IDs
       isActive,
       curatorId: curatorId === "" ? undefined : curatorId,
+      selectedProgramIds, // Include programs
     };
 
     if (isEdit) {
@@ -181,21 +221,110 @@ export default function StudentModal({ student, onClose, onSave, onDelete }: Pro
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div>
-                <label className="block text-xs text-zinc-500 mb-1">Страна</label>
-                <select
-                  value={countryId}
-                  onChange={(e) => setCountryId(e.target.value)}
-                  className={inputClass}
-                >
-                  {countries.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.flag_icon} {c.name}
-                    </option>
-                  ))}
-                </select>
+                <label className="block text-xs text-zinc-500 mb-1">
+                  Страны обучения {countryIds.length > 0 && `(${countryIds.length})`}
+                </label>
+                <div className="border rounded p-3 bg-white dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 space-y-2 max-h-40 overflow-y-auto">
+                  {countries.map((c) => {
+                    const isSelected = countryIds.includes(c.id);
+                    return (
+                      <label
+                        key={c.id}
+                        className="flex items-center gap-2 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-700 p-1 rounded transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setCountryIds([...countryIds, c.id]);
+                            } else {
+                              setCountryIds(countryIds.filter(id => id !== c.id));
+                            }
+                          }}
+                          className="w-4 h-4"
+                        />
+                        <span className="text-sm">
+                          {c.flag_icon} {c.name}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+                {/* Show selected countries as pills */}
+                {countryIds.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {countryIds.map((id) => {
+                      const country = countries.find(c => c.id === id);
+                      if (!country) return null;
+                      return (
+                        <span
+                          key={id}
+                          className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded"
+                        >
+                          {country.flag_icon} {country.name}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
+
+              {/* Programs Selection Block */}
+              {countryIds.length > 0 && (
+                <div>
+                  <label className="block text-xs text-zinc-500 mb-1">Выбранные программы</label>
+                  <div className="border rounded p-3 bg-white dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 space-y-4 max-h-60 overflow-y-auto text-sm">
+                    {countryIds.map(cid => {
+                      const country = countries.find(c => c.id === cid);
+                      const countryUnis = universities.filter(u => u.countryId === cid);
+
+                      if (countryUnis.length === 0) return null;
+
+                      return (
+                        <div key={cid} className="space-y-2">
+                          <div className="flex items-center gap-2 font-bold text-xs bg-zinc-100 dark:bg-zinc-700/50 p-1 rounded">
+                            <span>{country?.flag_icon}</span>
+                            <span>{country?.name}</span>
+                          </div>
+                          <div className="pl-2 space-y-3">
+                            {countryUnis.map(uni => (
+                              <div key={uni.id}>
+                                <div className="text-zinc-500 font-medium text-xs mb-1">{uni.logo_url} {uni.name}</div>
+                                <div className="pl-2 space-y-1">
+                                  {uni.programs && uni.programs.length > 0 ? uni.programs.map(prog => (
+                                    <label key={prog.id} className="flex items-center gap-2 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-700/50 p-1 rounded">
+                                      <input
+                                        type="checkbox"
+                                        className="w-3.5 h-3.5"
+                                        checked={selectedProgramIds.includes(prog.id)}
+                                        onChange={(e) => {
+                                          if (e.target.checked) setSelectedProgramIds([...selectedProgramIds, prog.id]);
+                                          else setSelectedProgramIds(selectedProgramIds.filter(id => id !== prog.id));
+                                        }}
+                                      />
+                                      <span className="truncate" title={prog.title}>{prog.title}</span>
+                                    </label>
+                                  )) : (
+                                    <div className="text-xs text-zinc-400 italic pl-1">Нет программ</div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {countryIds.length > 0 && universities.filter(u => countryIds.includes(u.countryId)).length === 0 && (
+                      <div className="text-center text-zinc-400 py-2">В выбранных странах нет добавленных университетов.</div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+
               <div>
                 <label className="block text-xs text-zinc-500 mb-1">Куратор</label>
                 <select

@@ -371,4 +371,28 @@ export class AdminService {
     await this.countryRepo.update(id, data);
     return this.countryRepo.findOneBy({ id });
   }
+
+  // --- Hierarchy Management ---
+  async getHierarchyTasks(context: 'country' | 'university' | 'program', id: string) {
+    if (context === 'country') {
+      return this.taskTplRepo.find({
+        where: { countryId: id, universityId: IsNull(), programId: IsNull() },
+        order: { id: 'ASC' }
+      });
+    }
+    if (context === 'university') {
+      return this.taskTplRepo.find({
+        where: { universityId: id, programId: IsNull() },
+        order: { id: 'ASC' }
+      });
+    }
+    if (context === 'program') {
+      return this.taskTplRepo.find({
+        where: { programId: Number(id) },
+        order: { id: 'ASC' }
+      });
+    }
+    return [];
+  }
+
 }

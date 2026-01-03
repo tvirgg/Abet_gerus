@@ -68,3 +68,70 @@ You must fully embody this agent's persona and follow all activation instruction
   </menu>
 </agent>
 ```
+
+---
+
+## 📋 Current Sprint: Cascading Task Templates ("Matryoshka")
+
+### Context
+Implementing a hierarchical task generation system where tasks descend from Country -> University -> Program levels.
+**Feature Spec**: [`docs/specs/feature-cascading-tasks.md`](../../docs/specs/feature-cascading-tasks.md)
+**Implementation Plan**: [`docs/sprint-artifacts/plan-cascading-tasks.md`](../../docs/sprint-artifacts/plan-cascading-tasks.md)
+
+### Detailed Tasks
+
+#### Phase 1: Backend Core 🛠️
+1. **Database Schema**
+   - [x] Add `programId`, `universityId`, `advice`, `submissionType` to `TaskTemplate` entity
+   - [x] Create and run DB migration
+   - [x] Update seeds with hierarchical data
+
+2. **Service Logic**
+   - [x] Implement `syncStudentTasks` with cascading query (Country OR Uni OR Program)
+   - [x] Implement task deduplication/accumulation logic
+
+#### Phase 2: Curator Tools 🎨
+1. **University Settings**
+   - [x] Build `UniversitySettingsPage` with hierarchy view
+   - [x] Implement "Country Tasks" (Read-only) & "University Tasks" (CRUD) blocks
+
+2. **Task Editor**
+   - [x] Upgrade `TaskTemplateModal` with Advice rich-text & Submission config
+
+#### Phase 3: Student Experience 🎓
+1. **Onboarding**
+   - [x] Update `CreateStudentModal` to include University/Program selection steps
+
+2. **Task Execution**
+   - [x] Update `TaskDetailModal` to show Advice and Dynamic Inputs (File/Text/Link)
+
+#### Phase 4: Testing & Validation 🧪
+1. **Backend Tests**
+   - [x] Unit: Test `syncStudentTasks` with various combinations (Country only, Country + Uni, all 3)
+   - [x] Integration: Verify database constraints and cascading query performance
+
+2. **Frontend Tests**
+   - [x] Component: Test `UniversitySettingsPage` rendering and hierarchy display
+   - [x] E2E: Create Template -> Create Student -> Verify Task
+
+### Quick Start Commands
+
+```bash
+# Generate migration
+cd backend && npm run migration:generate -- -n UpdateTaskTemplateHierarchy
+
+# Run migration
+npm run migration:run
+
+# Run backend tests
+cd backend && npm run test
+
+# Run frontend dev server
+cd frontend && npm run dev
+```
+
+### Resources
+
+- **Feature Spec**: [`docs/specs/feature-cascading-tasks.md`](../../docs/specs/feature-cascading-tasks.md)
+- **Detailed Plan**: [`docs/sprint-artifacts/plan-cascading-tasks.md`](../../docs/sprint-artifacts/plan-cascading-tasks.md)
+
